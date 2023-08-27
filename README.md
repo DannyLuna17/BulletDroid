@@ -38,4 +38,4 @@ Inspired by OpenBullet, this repository offers a powerful webtesting toolkit tai
 
 ## License
 
-This project is licensed under the GPL-3.0 [License](https://github.com/LunaPy17/BulletDroid/blob/main/LICENSE). See the LICENSE file for details.
+This project is licensed under the GNU General Public License v3.0 [License](https://github.com/LunaPy17/BulletDroid/blob/main/LICENSE). See the LICENSE file for details.
