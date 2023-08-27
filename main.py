@@ -25,7 +25,6 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.spinner import Spinner
 from kivy.uix.switch import Switch
 from kivy.uix.textinput import TextInput
-from kivmob import KivMob, TestIds
 from retry_requests import retry
 
 kivy.require('2.2.0')
@@ -49,8 +48,6 @@ def extract_substring(data, first, last):
 class MyApp(App):
     ICON_PATH = "src/logo.png"
     WATERMARK_PATH = "src/watermark.png"
-    TEST_AD_APP_ID = TestIds.APP
-    TEST_AD_BANNER_ID = TestIds.BANNER
     LOGS_TYPE = "Logs"
     HITS_TYPE = "Hits"
     DEADS_TYPE = "Deads"
@@ -68,13 +65,6 @@ class MyApp(App):
         self.full_screen_popup = Popup(title="View Content", content=full_screen_layout, size_hint=(0.9, 0.9))
         close_button.bind(on_press=self.full_screen_popup.dismiss)
         self.full_screen_popup.open()
-
-    def _init_advertisements(self):
-        """Initializes the ads banner."""
-        self.ads = KivMob(self.TEST_AD_APP_ID)
-        self.ads.new_banner(self.TEST_AD_BANNER_ID, top_pos=True)
-        self.ads.request_banner()
-        self.ads.show_banner()
 
     def build(self):
         # Initialize variables
