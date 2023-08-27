@@ -12,7 +12,7 @@ Inspired by OpenBullet, this repository offers a powerful webtesting toolkit tai
 - **User-friendly Interface**: An intuitive GUI built with the Kivy framework.
 - **Custom Configs**: Offers flexibility to customize the checking process with config files.
 - **Multi-threading Support**: Enables faster processing.
-- **Proxy Support**: Provides an added layer of security during account checks.
+- **Proxy Support**: Accepts all types of proxy.
 
 NOTE: You must allow Storage Permission at App Settings
 
