@@ -655,20 +655,23 @@ class MyApp(App):
 
     def run_file(self, instance):
         self.impreso = False
-        self.state_label.text = "State: Sleeping"
+        self.state_label.text = "State: Running"
         self.progress_bar.value = 0
         selected_option = self.options_spinner.text
 
         if self.proxies == "" and self.proxies_button.disabled == False:
             self.result_logs_label.text += f"\n[*] You must load Proxies!"
+            self.state_label.text = "State: Sleeping"
             return
 
         if self.combo == "":
+            self.state_label.text = "State: Sleeping"
             self.result_logs_label.text += f"\n[*] You must load a Combo!"
             return
 
         try: self.threads = int(self.threads_input.text)
-        except:
+        except ValueError:
+            self.state_label.text = "State: Sleeping"
             self.result_logs_label.text += f"\n[*] Invalid Threads Number!"
             return
 
