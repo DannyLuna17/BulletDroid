@@ -1,0 +1,712 @@
+# Standar imports
+import json
+import os
+import random
+from queue import Queue
+from threading import Thread
+from urllib.parse import quote
+
+# Third party imports
+import kivy
+from kivy.app import App
+from kivy.clock import Clock
+from kivy.core.clipboard import Clipboard
+from kivy.metrics import dp
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.filechooser import FileChooserListView
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.image import Image
+from kivy.uix.label import Label
+from kivy.uix.popup import Popup
+from kivy.uix.progressbar import ProgressBar
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.spinner import Spinner
+from kivy.uix.switch import Switch
+from kivy.uix.textinput import TextInput
+from kivmob import KivMob, TestIds
+from retry_requests import retry
+
+kivy.require('2.2.0')
+
+def extract_substring(data, first, last):
+    """
+    Extract a substring from data that is between two substrings: first and last.
+    
+    :param data: The main string from which the substring is to be extracted.
+    :param first: The starting substring.
+    :param last: The ending substring.
+    :return: Extracted substring or None if not found.
+    """
+    try:
+        start = data.index(first) + len(first)
+        end = data.index(last, start)
+        return data[start:end]
+    except ValueError:
+        return None
+
+class MyApp(App):
+    ICON_PATH = "src/logo.png"
+    WATERMARK_PATH = "src/watermark.png"
+    TEST_AD_APP_ID = TestIds.APP
+    TEST_AD_BANNER_ID = TestIds.BANNER
+    LOGS_TYPE = "Logs"
+    HITS_TYPE = "Hits"
+    DEADS_TYPE = "Deads"
+
+    def show_full_screen(self, text):
+        """Displays a fullscreen popup with the given text."""
+
+        full_screen_layout = BoxLayout(orientation='vertical')
+        full_screen_label = TextInput(text=text, readonly=True, multiline=True)
+        close_button = Button(text="Close", size_hint=(1, 0.1))
+
+        full_screen_layout.add_widget(full_screen_label)
+        full_screen_layout.add_widget(close_button)
+
+        self.full_screen_popup = Popup(title="View Content", content=full_screen_layout, size_hint=(0.9, 0.9))
+        close_button.bind(on_press=self.full_screen_popup.dismiss)
+        self.full_screen_popup.open()
+
+    def _init_advertisements(self):
+        """Initializes the ads banner."""
+        self.ads = KivMob(self.TEST_AD_APP_ID)
+        self.ads.new_banner(self.TEST_AD_BANNER_ID, top_pos=True)
+        self.ads.request_banner()
+        self.ads.show_banner()
+
+    def build(self):
+        # Initialize variables
+
+        self.combo, self.proxies = "", ""
+        self.proxy_switch_status = True
+        self.variables = {}
+        self.responses = {}
+        self.headers = {}
+        self.cookies = {}
+        self.find_variables = {}
+        self.progreso = 0
+        self.icon = self.ICON_PATH
+
+        # Initialize advertisements
+        self._init_advertisements()
+
+        self.layout = GridLayout(cols=1)
+
+        self.state_label = Label(text="State: Sleeping", size_hint=(0.3, 0.15), pos_hint={'right': 1, 'bottom': 1}, halign="right", valign="bottom", font_size=dp(20))
+        self.layout.add_widget(self.state_label)
+
+        # Add Progress Bar
+        self.progress_bar = ProgressBar(max=100, value=0, size_hint=(1, dp(0.05)))
+        self.layout.add_widget(self.progress_bar)
+
+        # Spinner Configuration
+        self.options_spinner = Spinner(text='Seleccione una opción', values=('Bees', "Custom"))
+        
+        # Threads Configuration
+        threads_label = Label(text="Threads:", size_hint=(dp(0.2), 1))
+        self.threads_input = TextInput(input_filter="int", multiline=False, size_hint=(dp(0.2), 1))
+        threads_layout = BoxLayout(orientation='horizontal', padding=dp(10), size_hint=(dp(0.3), dp(0.15)), spacing=dp(10))
+        threads_layout.add_widget(threads_label)
+        threads_layout.add_widget(self.threads_input)
+        threads_layout.add_widget(self.options_spinner)
+        self.layout.add_widget(threads_layout)
+
+        # Buttons Configuration
+        buttons_layout = BoxLayout(orientation='horizontal', padding=dp(10), spacing=dp(5), size_hint=(1, 0.2))
+        self.load_button = Button(text="Load Combo")
+        self.load_button.bind(on_press=self.load_file)
+        self.run_button = Button(text="Run Combo")
+        self.run_button.bind(on_press=self.run_file)
+        self.proxies_button = Button(text="Load Proxies")
+        self.proxies_button.bind(on_press=self.load_proxies)
+        self.load_instructions_button = Button(text="Load Config")
+        self.load_instructions_button.bind(on_press=self.load_instructions)
+        buttons_layout.add_widget(self.load_button)
+        buttons_layout.add_widget(self.run_button)
+        buttons_layout.add_widget(self.load_instructions_button)
+        buttons_layout.add_widget(self.proxies_button)
+
+        # Proxy Switch Configuration
+        proxy_switch_layout = BoxLayout(orientation='vertical', padding=dp(5))
+        proxy_label = Label(text="Proxies: ")
+        self.proxy_switch = Switch(active=True)
+        self.proxy_switch.bind(active=self.on_proxy_switch)
+        proxy_switch_layout.add_widget(proxy_label)
+        proxy_switch_layout.add_widget(self.proxy_switch)
+        buttons_layout.add_widget(proxy_switch_layout)
+
+        self.layout.add_widget(buttons_layout)
+
+        # Results Configuration
+        self.result_grid = GridLayout(cols=3, padding=dp(10))
+        self.layout.add_widget(self.result_grid)
+
+        def create_scrollable_label(text, color):
+            label = Label(text=text, font_size=dp(15), size_hint_y=None, size_hint_x=None, halign="left", valign="top", color=color)
+            label.bind(texture_size=label.setter('size'))
+            scroll_view = ScrollView(do_scroll_x=True, do_scroll_y=True)
+            box = BoxLayout(size_hint_y=None, size_hint_x=None, orientation='vertical')
+            box.bind(minimum_height=box.setter('height'))
+            box.bind(minimum_width=box.setter('width'))
+            box.add_widget(label)
+            scroll_view.add_widget(box)
+            return scroll_view, label
+        
+        def create_scrollable_label_with_clear_button(text, clear_text, color, type_):
+            scroll_view, label = create_scrollable_label(text, color)
+            clear_button = Button(text="Clean", size_hint=(1, 0.75), background_color=(0, 0, 0, 0.5))
+            clear_button.bind(on_press=lambda instance: setattr(label, 'text', clear_text))
+            copy_button = Button(text="Copy", size_hint=(1, 0.75), background_color=(0, 0, 0, 0.5))
+            copy_button.bind(on_press=lambda instance: Clipboard.copy(label.text))
+            view_button = Button(text="FullScreen", size_hint=(1, 0.75), background_color=(0, 0, 0, 0.5))
+            view_button.bind(on_press=lambda instance: self.show_full_screen(label.text))
+            buttons_box = BoxLayout(orientation='vertical', size_hint=(1, 0.75))
+            save_button = Button(text="Save", size_hint=(1, 0.75), background_color=(0, 0, 0, 0.5))
+            save_button.bind(on_press=lambda instance: self.save_content(instance=self, type_=type_))
+            buttons_box = BoxLayout(orientation='vertical', size_hint=(1, 0.75))
+            buttons_box.add_widget(clear_button)
+            buttons_box.add_widget(copy_button)
+            buttons_box.add_widget(view_button)
+            buttons_box.add_widget(save_button)
+            box_with_buttons = BoxLayout(orientation='vertical')
+            box_with_buttons.add_widget(scroll_view)
+            box_with_buttons.add_widget(buttons_box)
+            return box_with_buttons, label
+
+        self.result_logs_box, self.result_logs_label = create_scrollable_label_with_clear_button("Logs:\n", "Logs:\n", (1, 1, 1, 1), type_="Logs")
+        self.result_hits_box, self.result_hits_label = create_scrollable_label_with_clear_button("Hits:\n", "Hits:\n", (0, 1, 0, 1), type_="Hits")
+        self.result_deads_box, self.result_deads_label = create_scrollable_label_with_clear_button("Deads:\n", "Deads:\n", (1, 0, 0, 1), type_="Deads")
+
+        self.result_grid.add_widget(self.result_logs_box)
+        self.result_grid.add_widget(self.result_hits_box)
+        self.result_grid.add_widget(self.result_deads_box)
+
+        # Create and return the main layout
+        main_layout = FloatLayout()
+
+        # Add watermark image
+        watermark = Image(source=self.WATERMARK_PATH, allow_stretch=True, keep_ratio=False, opacity=0.65, pos_hint={'center_x': 0.5, 'center_y': 0.45}, size_hint=(0.8, 0.8))
+        main_layout.add_widget(watermark)
+
+        # Create a secondary layout to contain the existing layout
+        secondary_layout = FloatLayout(size_hint=(1, 1))
+        secondary_layout.add_widget(self.layout)
+
+        # Add the secondary layout to the main layout
+        main_layout.add_widget(secondary_layout)
+
+        return main_layout
+
+    def on_proxy_switch(self, instance, value):
+        # If the switch is turned off
+        if not value:
+            self.proxies = ""
+            self.proxies_button.disabled = True
+            self.result_logs_label.text += "\n[*] Proxies Disabled!"
+        # If the switch is turned on
+        else:
+            self.proxies_button.disabled = False
+            self.result_logs_label.text += "\n[*] Proxies Enabled!"
+
+    def save_content(self, type_, instance):
+        """
+        Display a popup with a file chooser and a save button to save the specified content type.
+
+        :param type_: The content type to be saved (e.g., Logs, Hits, Deads).
+        :param instance: The button instance triggering this method.
+        """
+
+        home_path = os.path.expanduser("~")
+        if ":" not in home_path: home_path = "/storage/emulated/0/"
+
+        # Create the FileChooser and the save button
+        content = BoxLayout(orientation='vertical', spacing=dp(5))
+        file_chooser = FileChooserListView(path=home_path)
+        save_button = Button(text="Save Here", size_hint_y=None, height=dp(44))
+        
+        # Bind the save button to save the content to the selected directory using partial
+        save_button.bind(on_press=lambda x: self.save_file(file_chooser.path, type_))
+        
+        content.add_widget(file_chooser)
+        content.add_widget(save_button)
+        
+        self.save_popup = Popup(title="Save Content", content=content, size_hint=(0.9, 0.9))
+        self.save_popup.open()
+
+    def save_file(self, path, type_):
+        """
+        Save the specified content type to a file in the given path.
+
+        :param path: The directory path where the file should be saved.
+        :param type_: The content type to be saved (e.g., Logs, Hits, Deads).
+        """
+
+        # Define a filename
+        filename = f"{type_}.txt"
+        
+        with open(os.path.join(path, filename), 'w') as file:
+            if type_ == self.LOGS_TYPE:
+                file.write(self.result_logs_label.text)
+            elif type_ == self.HITS_TYPE:
+                file.write(self.result_hits_label.text)
+            elif type_ == self.DEADS_TYPE:
+                file.write(self.result_deads_label.text)
+        self.save_popup.dismiss()
+
+    def _update_text_size(self, instance, value):
+        """
+        Update the width of the text widget based on the new value.
+        
+        :param instance: The text widget instance.
+        :param value: The new size value.
+        """
+        instance.text_size = (value[0], None)
+
+    def _update_text_height(self, instance, value):
+        """
+        Update the height of the text widget based on the texture size.
+        
+        :param instance: The text widget instance.
+        :param value: The new size value.
+        """
+        instance.text_size = (value, None)
+        instance.height = instance.texture_size[1]
+
+    def load_instructions(self, instance):
+        """
+        Display a file chooser popup to select and load instructions.
+        
+        :param instance: The button instance triggering this method.
+        """
+
+        home_path = os.path.expanduser("~")
+        if ":" not in home_path: home_path = "/storage/emulated/0/"
+        file_chooser = FileChooserListView(path=home_path, filters=['*.txt'])
+        self.choose_file_popup = Popup(title="Load Config", content=file_chooser, size_hint=(0.9, 0.9))
+
+        file_chooser.bind(on_submit=self._load_selected_instructions)
+        self.choose_file_popup.open()
+        self.result_logs_label.text += f"\nLoading Config..."
+
+    def run_custom_instructions(self, email, passwordO, proxyDict):
+        """
+        Processes the loaded instructions using the provided email, password, and proxy dictionary.
+        
+        :param email: The email to be processed.
+        :param passwordO: The corresponding password.
+        :param proxyDict: The proxy settings.
+        :return: Result message if any.
+        """
+
+        # Ensure instructions are loaded
+        if not getattr(self, 'instructions', None):
+            return "\n[*] You must load instructions first!"
+        
+        # Initialize session
+        self.my_session = retry()
+
+        # Iterate through the instructions and process them
+        for instruction in self.instructions:
+            result = self.process_instruction(instruction.strip(), email, passwordO, proxyDict)
+            if result:
+                return result
+        return None
+
+    def load_file(self, instance):
+        """Load the combo file."""
+        self._setup_file_chooser("Load Combo", self._load_selected_file)
+        self.result_logs_label.text += "\nLoading Combo..."
+
+    def load_proxies(self, instance):
+        """Load the proxies file."""
+        self._setup_file_chooser("Load Proxies", self._load_selected_proxies)
+        self.result_logs_label.text += "\nLoading Proxies..."
+            
+    def _load_selected_file(self, instance, selected_file, *args):
+        """Process the selected combo file."""
+        try:
+            with open(selected_file[0], 'r') as file:
+                self.combo = file.read()
+                self.result_logs_label.text += f"\nCombo Loaded:\n{selected_file[0]}"
+        except Exception as e:
+            self.result_logs_label.text += f"\nError loading combo: {e}"
+        finally:
+            self.choose_file_popup.dismiss()
+        
+    def _load_selected_proxies(self, instance, selected_file, *args):
+        """Process the selected proxies file."""
+        try:
+            with open(selected_file[0], 'r') as file:
+                self.proxies = file.read()
+                self.result_logs_label.text += f"\nProxies Loaded:\n{selected_file[0]}"
+        except Exception as e:
+            self.result_logs_label.text += f"\nError loading proxies: {e}"
+        finally:
+            self.choose_file_popup.dismiss()
+
+    def _load_selected_instructions(self, instance, selected_file, *args):
+        """Process the selected instructions file."""
+        if type(selected_file) == str: selected_file = [selected_file]
+        try:
+            with open(selected_file[0], 'r') as file:
+                self.instructions = file.read().split('\n')
+                self.result_logs_label.text += f"\nInstructions Loaded:\n{selected_file[0]}"
+        except Exception as e:
+            self.result_logs_label.text += f"\nError loading instructions: {e}"
+        finally:
+            self.choose_file_popup.dismiss()
+
+    def _setup_file_chooser(self, title, submit_callback):
+        """
+        Set up a file chooser with the given title and submit callback.
+
+        :param title: Title for the popup.
+        :param submit_callback: Callback function to handle the selected file.
+        """
+        home_path = os.path.expanduser("~")
+        if ":" not in home_path:
+            home_path = "/storage/emulated/0/"
+        
+        file_chooser = FileChooserListView(path=home_path, filters=['*.txt'])
+        self.choose_file_popup = Popup(title=title, content=file_chooser, size_hint=(0.7, 0.7))
+        
+        file_chooser.bind(on_submit=submit_callback)
+        self.choose_file_popup.open()
+
+    def process_instruction(self, instruction, email, password, proxyDict):
+        """
+        Processes a given instruction using the provided email, password, and proxy dictionary.
+        
+        :param instruction: The instruction string to process.
+        :param email: Email to be used in the instruction.
+        :param password: Password to be used in the instruction.
+        :param proxyDict: Proxy settings.
+        :return: Processed result or error message.
+        """
+
+        self.email = email
+        self.password = password
+        self.proxyDict = proxyDict
+
+        # Split instruction into its components
+        components = instruction.split('|')
+        params = {key: value for key, value in (part.split('=', 1) for part in components)}
+
+        # Check if the instruction is valid
+        if 'BLOCK' not in params:
+            self.result_logs_label.text += f"\nInvalid instruction: {instruction}"
+            return
+
+        # Direct to appropriate handlers based on block type
+        block_type = params['BLOCK'].split('-', 1)[0]
+        handler_name = f"handle_{block_type.lower()}"
+        handler_method = getattr(self, handler_name, None)
+
+        if handler_method:
+            result = handler_method(params)
+            if block_type == "RESULT" and result:
+                return result
+        else:
+            return f"\nUnrecognized block type: {block_type}"
+
+    def _replace_variables(self, input_string, encode=False):
+        """
+        Replace placeholders in the string with their actual values.
+        
+        :param input_string: The input string containing placeholders.
+        :param encode: If True, encodes the replaced values.
+        :return: String with placeholders replaced.
+        """
+        while "<" in input_string and ">" in input_string:
+            start_idx = input_string.find("<")
+            end_idx = input_string.find(">")
+            if start_idx != -1 and end_idx != -1:
+                variable_name = input_string[start_idx + 1:end_idx].strip()
+                if "REQUEST-" in variable_name:
+                    variable_value = str(self.responses.get(variable_name[:-5])) if "text" in variable_name else str(self.headers.get(variable_name[:-8]))
+                elif variable_name == "EMAIL":
+                    variable_value = self.email
+                elif variable_name == "PASSWORD":
+                    variable_value = self.password
+                else:
+                    variable_value = str(self.variables.get(variable_name))
+                
+                if not variable_value:
+                    self.result_logs_label.text += f"\n{variable_name} - Variable not found"
+                    return
+                else:
+                    if encode: 
+                        variable_value = quote(variable_value)
+                    input_string = input_string[:start_idx] + variable_value + input_string[end_idx + 1:]
+        return input_string
+
+    def handle_result(self, params):
+        """
+        Handles the RESULT block type in instructions.
+        
+        :param params: Dictionary of parameters extracted from the instruction.
+        :return: Processed result or None.
+        """
+        value_string = params.get('VALUE', '').strip().encode('latin1').decode('utf-8')
+        variable_content = self._replace_variables(params.get('VAR', '').strip())
+        category = params.get('CATEGORY', '').strip()
+        return_string = params.get('RETURN', '').strip()
+
+        # Check if the variable exists
+        if not variable_content:
+            return
+
+        # Check if the value string exists in the variable content
+        if value_string in variable_content:
+            response_string = return_string or value_string
+            return f"\nCREDENTIALS = {self.email}:{self.password} | RESPONSE = {response_string} | {category}"
+        return None
+
+    def handle_request(self, params):
+        """
+        Handle HTTP requests based on provided parameters.
+        
+        :param params: Dictionary containing parameters for the request.
+        """
+
+        block = params.get('BLOCK')
+        type_ = params.get('TYPE', 'GET').upper()
+        url = params.get('URL')
+        headers = params.get('HEADERS')
+        post_data = params.get('POST')
+
+        if not url:
+            self.result_logs_label.text += "\nURL not provided for the request"
+            return
+        
+        url=self._replace_variables(url)
+
+        # COnvert the headers string to a dictionary
+        headers_dict = {}
+        if headers:
+            headers = self._replace_variables(headers)
+            if headers == None:
+                self.result_logs_label.text += "\nHeaders provided are invalid for the request"
+                return
+            headers = json.loads(headers)
+
+        response = None
+        if type_ == 'GET':
+            response = self.my_session.get(url, headers=headers_dict)
+        elif type_ == 'POST':
+            # if payload is json not must be encoded
+            if post_data[0:1] == "{" or post_data[0:1] == "[":
+                post_data=self._replace_variables(post_data, False)
+            else:
+                post_data=self._replace_variables(post_data, True)
+            if post_data == None:
+                return
+            response = self.my_session.post(url, data=post_data, headers=headers, timeout=45)
+
+        if response != None:
+            self.responses[block] = response.text
+            self.headers[block] = response.headers
+            self.cookies[block] = response.cookies
+            self.result_logs_label.text += f"\n{block} - Response Code: {response.status_code}"
+
+    def handle_save(self, params):
+        """
+        Save a value to a variable for later use.
+        
+        :param params: Dictionary containing variable name and value.
+        """
+
+        variable_name = params.get('VAR')
+        value = params.get('VALUE')
+
+        if not variable_name or value is None:
+            self.result_logs_label.text += "\nVariable name or value not provided"
+            return
+
+        # Save the variable in a dictionary for later use
+        self.variables[variable_name] = value
+    
+    def handle_find(self, params):
+        """
+        Find a substring between two delimiters.
+        
+        :param params: Dictionary containing the variable name, delimiters, and block.
+        """
+
+        block = params.get('BLOCK')
+        variable_name = params.get('VAR')
+        first_delimiter = params.get('FIRST')
+        last_delimiter = params.get('LAST')
+
+        if not variable_name or not variable_name:
+            self.result_logs_label.text += "\nVariable name or pattern not provided"
+            return
+        
+        if "text" in variable_name:
+            variable_value = str(self.responses.get(variable_name[:-5]))
+        elif "headers" in variable_name:
+            variable_value = str(self.headers.get(variable_name[:-8]))
+        else:
+            self.result_logs_label.text += f"\nVariable {variable_name} not Found"
+            return
+        
+        result = extract_substring(variable_value, first_delimiter, last_delimiter)
+        self.variables[block] = result
+
+        if result != "":
+            self.result_logs_label.text += f"\nFIND ({variable_name}) - {result}"
+            return
+        else:
+            self.result_logs_label.text += f"\nFIND ({variable_name}) - Not Found"
+            return
+
+    def handle_print(self, params):
+        """Handle the PRINT block in the instructions."""
+        variable_name = params.get('VAR')
+
+        if not variable_name:
+            self.result_logs_label.text += "\nVariable name not provided"
+            return
+
+        if "<" in variable_name:
+            variable_name = self._extract_substring(variable_name, "<", ">")
+            if "text" in variable_name:
+                content = self.responses.get(variable_name[:-5])
+            elif "headers" in variable_name:
+                content = self.headers.get(variable_name[:-8])
+            elif "cookies" in variable_name:
+                content = self.cookies.get(variable_name[:-8])
+            elif variable_name == "EMAIL":
+                content = self.email
+            else:
+                content = self.variables.get(variable_name)
+
+            self._print_content(variable_name, content)
+        else:
+            self.result_logs_label.text += f"\nVariable {variable_name} not found"
+
+    def _print_content(self, variable_name, content):
+        """Print the content of a variable in chunks."""
+        if content:
+            content_str = str(content)
+            if len(content_str) > 1000:
+                chunks = [content_str[i: i + 1000] for i in range(0, len(content_str), 1000)]
+                for chunk in chunks:
+                    self.result_logs_label.text += f"\nPRINT [{variable_name}] - {chunk}"
+            else:
+                self.result_logs_label.text += f"\nPRINT [{variable_name}] - {content_str}"
+        else:
+            self.result_logs_label.text += f"\nVariable {variable_name} not found or empty"
+
+    @staticmethod
+    def _extract_substring(input_string, start_delimiter, end_delimiter):
+        """Extract a substring between two delimiters."""
+        try:
+            start = input_string.index(start_delimiter) + len(start_delimiter)
+            end = input_string.index(end_delimiter, start)
+            return input_string[start:end]
+        except ValueError:
+            return ""
+
+    def worker(self, task_queue, proxyDict, selected_option):
+        while not task_queue.empty():
+            acc = task_queue.get()
+            email, passwordO = acc.split(':')
+            if selected_option == "Bees":
+                self._load_selected_instructions(self, selected_file="configs/bees.txt")
+                result = self.run_custom_instructions(email, passwordO, proxyDict)
+            elif selected_option == "Custom":
+                result = self.run_custom_instructions(email, passwordO, proxyDict)
+            if not result:
+                self.result_logs_label.text += f"\n[*] Combo Finished!"
+                return
+            elif "You must load instructions first!" in result:
+                self.result_logs_label.text += f"\n[*] You must load instructions first!"
+                return
+            elif result:
+                self.update_gui(result)
+                progress = (self.progreso + 1) / self.total_instructions * 100
+                self.progress_bar.value += progress
+            
+            self.worker_threads_running -= 1  # Decrement the count of running threads
+            task_queue.task_done()
+        
+    def check_threads_finished(self, dt):
+        if self.worker_threads_running == 0:
+            print("Threads Finished")
+        if self.progress_bar.value == 100 and self.impreso == False:
+            self.impreso = True
+            self.state_label.text = "State: Sleeping"
+            self.result_logs_label.text += f"\n[*] Combo Finished!"
+
+    def update_gui(self, result):
+        def update(dt):
+            if result == None:
+                return
+            if "HIT" in result:
+                self.result_hits_label.text += result
+            elif "DEAD" in result:
+                self.result_deads_label.text += result
+            else:
+                self.result_logs_label.text += result
+        Clock.schedule_once(update)
+
+    def run_file(self, instance):
+        self.impreso = False
+        self.state_label.text = "State: Sleeping"
+        self.progress_bar.value = 0
+        selected_option = self.options_spinner.text
+
+        if self.proxies == "" and self.proxies_button.disabled == False:
+            self.result_logs_label.text += f"\n[*] You must load Proxies!"
+            return
+
+        if self.combo == "":
+            self.result_logs_label.text += f"\n[*] You must load a Combo!"
+            return
+
+        try: self.threads = int(self.threads_input.text)
+        except:
+            self.result_logs_label.text += f"\n[*] Invalid Threads Number!"
+            return
+
+        if self.proxies != "":
+            proxy = set()
+            file_lines1 = self.proxies.split('\n')
+            for line1 in file_lines1:
+                proxy.add(line1.strip())
+            proxyDict = {
+                'http': 'http://'+random.choice(list(proxy)),
+                'https': 'http://'+random.choice(list(proxy))
+            }
+        else: proxyDict=None
+
+        accsLista = []
+        
+        acssLines = self.combo.split('\n')
+        for line in acssLines:
+            accsLista.append(line.strip())
+
+        self.result_queue = Queue()
+
+        self.worker_threads_running = 0
+
+        task_queue = Queue()
+        for acc in acssLines:
+            task_queue.put(acc)
+        self.total_instructions = task_queue.qsize()
+
+        # Start the worker threads
+        for _ in range(self.threads):
+            self.worker_threads_running += 1  # Increment the count of running threads
+            thread = Thread(target=self.worker, args=(task_queue, proxyDict, selected_option))
+            thread.start()
+
+        Clock.schedule_interval(self.check_threads_finished, 1)
+
+        return
+
+if __name__ == '__main__':
+    MyApp().run()
