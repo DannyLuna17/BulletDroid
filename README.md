@@ -20,6 +20,8 @@ Inspired by OpenBullet, this repository offers a powerful webtesting toolkit tai
 
 ## Config Blocks
 
+NOTE: You can see config examples in [Configs Carpet](https://github.com/LunaPy17/BulletDroid/tree/main/configs).
+
 * REQUEST - Handle HTTP requests based on provided parameters (Headers, Postdata, etc).
 * FIND - Parse a substring between two delimiters in a variable.
 * SAVE - Set a string variable.
@@ -28,9 +30,9 @@ Inspired by OpenBullet, this repository offers a powerful webtesting toolkit tai
 
 ## Requirements
 
-* Python 3.x
-* Kivy
-* Retry_requests
+* python 3.x
+* kivy
+* retry_requests
 
 ## Installation
 
