@@ -1,0 +1,4 @@
+BLOCK=REQUEST-1|TYPE=POST|URL=https://backend.fundednext.com/api/v1/auth/login|POST={"email":"<EMAIL>","password":"<PASSWORD>"}|HEADERS={"authority": "backend.fundednext.com", "method": "POST", "path": "/api/v1/auth/login", "Accept": "application/json", "Accept-Language": "en", "Content-Type": "application/json", "Origin": "https://app.fundednext.com", "Referer": "https://app.fundednext.com/", "Sec-Ch-Ua-Mobile": "?0", "Sec-Fetch-Dest": "empty", "Sec-Fetch-Mode": "cors", "Sec-Fetch-Site": "same-site", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203"}
+BLOCK=PRINT|VAR=<REQUEST-1.text>
+BLOCK=RESULT|VALUE=SUCCESS|VAR=<REQUEST-1.text>|CATEGORY=HIT
+BLOCK=RESULT|VALUE=ERROR|VAR=<REQUEST-1.text>|CATEGORY=DEAD|RETURN=Email or password is incorrect!
