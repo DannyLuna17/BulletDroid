@@ -16,6 +16,7 @@ Inspired by OpenBullet, this repository offers a powerful webtesting toolkit tai
 
 ![image](https://github.com/LunaPy17/BulletDroid/assets/69711934/eedb332d-4c07-4f4d-9973-8ba39502c9b1)
 
+![image](https://github.com/LunaPy17/BulletDroid/assets/69711934/9cd3aba8-de89-4f10-b73e-06190c5c97a0)
 
 ## Config Blocks
 
