@@ -82,27 +82,27 @@ class MyApp(App):
 
         self.layout = GridLayout(cols=1)
 
-        self.state_label = Label(text="State: Sleeping", size_hint=(dp(0.3), dp(0.15)), pos_hint={'right': 1, 'bottom': 1}, halign="right", valign="bottom", font_size=dp(20))
+        self.state_label = Label(text="State: Sleeping", size_hint=(0.3, 0.1), pos_hint={'right': 1, 'bottom': 1}, halign="right", valign="bottom", font_size=dp(20))
         self.layout.add_widget(self.state_label)
 
         # Add Progress Bar
-        self.progress_bar = ProgressBar(max=100, value=0, size_hint=(dp(1), dp(0.05)))
+        self.progress_bar = ProgressBar(max=100, value=0, size_hint=(1, 0.05))
         self.layout.add_widget(self.progress_bar)
 
         # Spinner Configuration
-        self.options_spinner = Spinner(text='Select Config', values=('Bees', "Custom"), size_hint=(dp(0.4), dp(1)), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+        self.options_spinner = Spinner(text='Select Config', values=('Bees', "Custom"))
         
         # Threads Configuration
-        threads_label = Label(text="Threads:", size_hint=(dp(0.1), dp(1)))
-        self.threads_input = TextInput(input_filter="int", multiline=False, size_hint=(dp(0.1), dp(1)))
-        threads_layout = BoxLayout(orientation='horizontal', padding=dp(10), size_hint=(dp(0.1), dp(0.13)), spacing=dp(10))
+        threads_label = Label(text="Threads:")
+        self.threads_input = TextInput(input_filter="int", multiline=False)
+        threads_layout = BoxLayout(orientation='horizontal', padding=10, spacing=5, size_hint=(1, 0.15))
         threads_layout.add_widget(threads_label)
         threads_layout.add_widget(self.threads_input)
         threads_layout.add_widget(self.options_spinner)
         self.layout.add_widget(threads_layout)
 
         # Buttons Configuration
-        buttons_layout = BoxLayout(orientation='horizontal', padding=dp(10), spacing=dp(5), size_hint=(dp(1), dp(0.2)))
+        buttons_layout = BoxLayout(orientation='horizontal', padding=dp(10), spacing=dp(5), size_hint=(1, 0.16))
         self.load_button = Button(text="Load Combo")
         self.load_button.bind(on_press=self.load_file)
         self.run_button = Button(text="Run Combo")
@@ -126,7 +126,7 @@ class MyApp(App):
         # Disable proxy loading button by default
         self.proxies_button.disabled = True
 
-        proxy_layout = BoxLayout(orientation='vertical', padding=dp(5))
+        proxy_layout = BoxLayout(orientation='vertical')
         proxy_label = Label(text="Proxy Type:")
         proxy_layout.add_widget(proxy_label)
         proxy_layout.add_widget(self.proxy_spinner)
