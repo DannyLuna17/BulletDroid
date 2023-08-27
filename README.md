@@ -14,6 +14,8 @@ Inspired by OpenBullet, this repository offers a powerful webtesting toolkit tai
 - **Multi-threading Support**: Enables faster processing.
 - **Proxy Support**: Provides an added layer of security during account checks.
 
+NOTE: You must allow Storage Permission at App Settings
+
 ![image](https://github.com/LunaPy17/BulletDroid/assets/69711934/eedb332d-4c07-4f4d-9973-8ba39502c9b1)
 
 ![image](https://github.com/LunaPy17/BulletDroid/assets/69711934/9cd3aba8-de89-4f10-b73e-06190c5c97a0)
