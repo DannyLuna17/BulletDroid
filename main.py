@@ -79,9 +79,6 @@ class MyApp(App):
         self.progreso = 0
         self.icon = self.ICON_PATH
 
-        # Initialize advertisements
-        self._init_advertisements()
-
         self.layout = GridLayout(cols=1)
 
         self.state_label = Label(text="State: Sleeping", size_hint=(0.3, 0.15), pos_hint={'right': 1, 'bottom': 1}, halign="right", valign="bottom", font_size=dp(20))
