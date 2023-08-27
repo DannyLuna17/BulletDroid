@@ -1,5 +1,3 @@
-# RECOERDAR PONER pysocks EN EL REQUIREMENTS.TXT
-
 # Standar imports
 import json
 import os
