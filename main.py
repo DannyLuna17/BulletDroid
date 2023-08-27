@@ -1,3 +1,5 @@
+# RECOERDAR PONER pysocks EN EL REQUIREMENTS.TXT
+
 # Standar imports
 import json
 import os
@@ -23,10 +25,11 @@ from kivy.uix.popup import Popup
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.spinner import Spinner
-from kivy.uix.switch import Switch
 from kivy.uix.textinput import TextInput
 from retry_requests import retry
+import urllib3
 
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 kivy.require('2.2.0')
 
 def extract_substring(data, first, last):
@@ -81,27 +84,27 @@ class MyApp(App):
 
         self.layout = GridLayout(cols=1)
 
-        self.state_label = Label(text="State: Sleeping", size_hint=(0.3, 0.15), pos_hint={'right': 1, 'bottom': 1}, halign="right", valign="bottom", font_size=dp(20))
+        self.state_label = Label(text="State: Sleeping", size_hint=(dp(0.3), dp(0.15)), pos_hint={'right': 1, 'bottom': 1}, halign="right", valign="bottom", font_size=dp(20))
         self.layout.add_widget(self.state_label)
 
         # Add Progress Bar
-        self.progress_bar = ProgressBar(max=100, value=0, size_hint=(1, dp(0.05)))
+        self.progress_bar = ProgressBar(max=100, value=0, size_hint=(dp(1), dp(0.05)))
         self.layout.add_widget(self.progress_bar)
 
         # Spinner Configuration
-        self.options_spinner = Spinner(text='Seleccione una opción', values=('Bees', "Custom"))
+        self.options_spinner = Spinner(text='Select Config', values=('Bees', "Custom"), size_hint=(dp(0.4), dp(1)), pos_hint={'center_x': 0.5, 'center_y': 0.5})
         
         # Threads Configuration
-        threads_label = Label(text="Threads:", size_hint=(dp(0.2), 1))
-        self.threads_input = TextInput(input_filter="int", multiline=False, size_hint=(dp(0.2), 1))
-        threads_layout = BoxLayout(orientation='horizontal', padding=dp(10), size_hint=(dp(0.3), dp(0.15)), spacing=dp(10))
+        threads_label = Label(text="Threads:", size_hint=(dp(0.1), dp(1)))
+        self.threads_input = TextInput(input_filter="int", multiline=False, size_hint=(dp(0.1), dp(1)))
+        threads_layout = BoxLayout(orientation='horizontal', padding=dp(10), size_hint=(dp(0.1), dp(0.13)), spacing=dp(10))
         threads_layout.add_widget(threads_label)
         threads_layout.add_widget(self.threads_input)
         threads_layout.add_widget(self.options_spinner)
         self.layout.add_widget(threads_layout)
 
         # Buttons Configuration
-        buttons_layout = BoxLayout(orientation='horizontal', padding=dp(10), spacing=dp(5), size_hint=(1, 0.2))
+        buttons_layout = BoxLayout(orientation='horizontal', padding=dp(10), spacing=dp(5), size_hint=(dp(1), dp(0.2)))
         self.load_button = Button(text="Load Combo")
         self.load_button.bind(on_press=self.load_file)
         self.run_button = Button(text="Run Combo")
@@ -115,14 +118,21 @@ class MyApp(App):
         buttons_layout.add_widget(self.load_instructions_button)
         buttons_layout.add_widget(self.proxies_button)
 
-        # Proxy Switch Configuration
-        proxy_switch_layout = BoxLayout(orientation='vertical', padding=dp(5))
-        proxy_label = Label(text="Proxies: ")
-        self.proxy_switch = Switch(active=True)
-        self.proxy_switch.bind(active=self.on_proxy_switch)
-        proxy_switch_layout.add_widget(proxy_label)
-        proxy_switch_layout.add_widget(self.proxy_switch)
-        buttons_layout.add_widget(proxy_switch_layout)
+        # Spinner for proxy selection
+        self.proxy_spinner = Spinner(
+            text='No Proxy',
+            values=('No Proxy', 'HTTP', 'HTTPS', 'SOCKS4', 'SOCKS5')
+        )
+        self.proxy_spinner.bind(text=self.on_proxy_spinner_selection)
+
+        # Disable proxy loading button by default
+        self.proxies_button.disabled = True
+
+        proxy_layout = BoxLayout(orientation='vertical', padding=dp(5))
+        proxy_label = Label(text="Proxy Type:")
+        proxy_layout.add_widget(proxy_label)
+        proxy_layout.add_widget(self.proxy_spinner)
+        buttons_layout.add_widget(proxy_layout)
 
         self.layout.add_widget(buttons_layout)
 
@@ -186,16 +196,23 @@ class MyApp(App):
 
         return main_layout
 
-    def on_proxy_switch(self, instance, value):
-        # If the switch is turned off
-        if not value:
+    def on_proxy_spinner_selection(self, instance, value):
+        """
+        Handles the selection event of the proxy spinner.
+        
+        :param instance: The widget instance that triggered the event.
+        :param value: The selected value from the spinner.
+        """
+        
+        # Check if "No Proxy" is selected
+        if value == "No Proxy":
             self.proxies = ""
             self.proxies_button.disabled = True
             self.result_logs_label.text += "\n[*] Proxies Disabled!"
-        # If the switch is turned on
         else:
+            # Handle other proxy type selections
             self.proxies_button.disabled = False
-            self.result_logs_label.text += "\n[*] Proxies Enabled!"
+            self.result_logs_label.text += f"\n[*] {value} Proxies Enabled!"
 
     def save_content(self, type_, instance):
         """
@@ -362,6 +379,69 @@ class MyApp(App):
         file_chooser.bind(on_submit=submit_callback)
         self.choose_file_popup.open()
 
+    def parse_proxy(self, proxy_str, proxy_type):
+        proxy_dict = {}
+
+        # Check for valid proxy types
+        valid_proxy_types = ["http", "https", "socks4", "socks5", "socks4a", "socks5h"]
+        if proxy_type not in valid_proxy_types:
+            raise ValueError(f"Invalid proxy type provided: {proxy_type}. Supported types are: {', '.join(valid_proxy_types)}")
+
+        # Parse rotative proxies with "@" format
+        if "@" in proxy_str and (proxy_str.count(":") >= 2):
+            user_pass, host_port = proxy_str.split("@")
+            host, port = host_port.split(":")
+            
+            # Check if "-" is present and not a common split character for username:password
+            if "-" in user_pass and ":" not in user_pass:
+                username = user_pass.rsplit("-", 1)[0]
+                password = user_pass.rsplit("-", 1)[1]
+            else:
+                username, password = user_pass.split(":")
+            
+            formatted_proxy = f"{proxy_type}://{username}:{password}@{host}:{port}"
+
+        # Another format for rotative proxies without "@"
+        elif proxy_str.count(":") == 3:
+            split_values = proxy_str.split(":")
+            host = split_values[0]
+            port = split_values[1]
+            
+            # Construct user_pass from remaining split values
+            user_pass = ":".join(split_values[2:])
+            
+            # Check if "-" is present and not a common split character for username:password
+            if "-" in user_pass and ":" not in user_pass:
+                username = user_pass.rsplit("-", 1)[0]
+                password = user_pass.rsplit("-", 1)[1]
+            else:
+                username, password = user_pass.split(":")
+            
+            formatted_proxy = f"{proxy_type}://{username}:{password}@{host}:{port}"
+
+        # Parse regular proxies with known scheme
+        elif proxy_str.startswith(tuple(valid_proxy_types)):
+            proxy_given_type, rest = proxy_str.split("://")
+            formatted_proxy = proxy_str
+            proxy_type = proxy_given_type
+
+        # Parse proxies without a scheme but with port
+        elif proxy_str.count(":") == 1:
+            host, port = proxy_str.split(":")
+            formatted_proxy = f"{proxy_type}://{host}:{port}"
+
+        # Parse individual IPs without ports
+        elif "." in proxy_str and ":" not in proxy_str:
+            formatted_proxy = f"{proxy_type}://{proxy_str}"
+
+        # If none of the above formats match, return None
+        else:
+            return None
+
+        proxy_dict["http"] = formatted_proxy
+        proxy_dict["https"] = formatted_proxy
+        return proxy_dict
+
     def process_instruction(self, instruction, email, password, proxyDict):
         """
         Processes a given instruction using the provided email, password, and proxy dictionary.
@@ -481,7 +561,7 @@ class MyApp(App):
 
         response = None
         if type_ == 'GET':
-            response = self.my_session.get(url, headers=headers_dict)
+            response = self.my_session.get(url, headers=headers_dict, proxies=self.proxyDict, timeout=45, verify=False)
         elif type_ == 'POST':
             # if payload is json not must be encoded
             if post_data[0:1] == "{" or post_data[0:1] == "[":
@@ -490,7 +570,7 @@ class MyApp(App):
                 post_data=self._replace_variables(post_data, True)
             if post_data == None:
                 return
-            response = self.my_session.post(url, data=post_data, headers=headers, timeout=45)
+            response = self.my_session.post(url, data=post_data, proxies=self.proxyDict, headers=headers, timeout=45, verify=False)
 
         if response != None:
             self.responses[block] = response.text
@@ -587,6 +667,7 @@ class MyApp(App):
         else:
             self.result_logs_label.text += f"\nVariable {variable_name} not found or empty"
 
+
     @staticmethod
     def _extract_substring(input_string, start_delimiter, end_delimiter):
         """Extract a substring between two delimiters."""
@@ -597,10 +678,18 @@ class MyApp(App):
         except ValueError:
             return ""
 
-    def worker(self, task_queue, proxyDict, selected_option):
+    def worker(self, task_queue, selected_option):
         while not task_queue.empty():
             acc = task_queue.get()
             email, passwordO = acc.split(':')
+            if self.proxies != "":
+                proxy = set()
+                file_lines1 = self.proxies.split('\n')
+                for line1 in file_lines1:
+                    proxy.add(line1.strip())
+                proxyDict = self.parse_proxy(random.choice(list(proxy)), self.proxy_spinner.text.swapcase())
+                print(proxyDict)
+            else: proxyDict=None
             if selected_option == "Bees":
                 self._load_selected_instructions(self, selected_file="configs/bees.txt")
                 result = self.run_custom_instructions(email, passwordO, proxyDict)
@@ -662,17 +751,6 @@ class MyApp(App):
             self.result_logs_label.text += f"\n[*] Invalid Threads Number!"
             return
 
-        if self.proxies != "":
-            proxy = set()
-            file_lines1 = self.proxies.split('\n')
-            for line1 in file_lines1:
-                proxy.add(line1.strip())
-            proxyDict = {
-                'http': 'http://'+random.choice(list(proxy)),
-                'https': 'http://'+random.choice(list(proxy))
-            }
-        else: proxyDict=None
-
         accsLista = []
         
         acssLines = self.combo.split('\n')
@@ -687,11 +765,15 @@ class MyApp(App):
         for acc in acssLines:
             task_queue.put(acc)
         self.total_instructions = task_queue.qsize()
+        proxy = set()
+        file_lines1 = self.proxies.split('\n')
+        for line1 in file_lines1:
+            proxy.add(line1.strip())
 
         # Start the worker threads
         for _ in range(self.threads):
             self.worker_threads_running += 1  # Increment the count of running threads
-            thread = Thread(target=self.worker, args=(task_queue, proxyDict, selected_option))
+            thread = Thread(target=self.worker, args=(task_queue, selected_option))
             thread.start()
 
         Clock.schedule_interval(self.check_threads_finished, 1)
