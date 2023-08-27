@@ -36,8 +36,20 @@ NOTE: You can see config examples in [Configs Carpet](https://github.com/LunaPy1
 
 ## Installation
 
-1. Clone the repository: git clone https://github.com/LunaPy17/BulletDroid
-2. Install the required packages: pip install -r requirements.txt
+1. Clone the repository
+```bash
+git clone https://github.com/LunaPy17/BulletDroid
+```
+
+2. Install the required packages
+```bash
+pip install -r requirements.txt
+```
+
+3. Execute the app
+```bash
+python main.py
+```
 
 ## License
 
