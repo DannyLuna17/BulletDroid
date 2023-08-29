@@ -5,6 +5,7 @@ import random
 from queue import Queue
 from threading import Thread
 from urllib.parse import quote
+import time
 
 # Third party imports
 import kivy
@@ -17,6 +18,7 @@ from kivy.uix.button import Button
 from kivy.uix.filechooser import FileChooserListView
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.dropdown import DropDown
 from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
@@ -24,6 +26,7 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.spinner import Spinner
 from kivy.uix.textinput import TextInput
+from kivy.graphics import Color, Rectangle, Line
 from retry_requests import retry
 import urllib3
 
@@ -46,7 +49,34 @@ def extract_substring(data, first, last):
     except ValueError:
         return None
 
-class MyApp(App):
+class BorderedButton(Button):
+    def __init__(self, border_color=(1, 1, 1, 1), bg_color=(0, 0, 0, 0), **kwargs):
+        super(BorderedButton, self).__init__(**kwargs)
+        self.border_color = border_color
+        self.bg_color = bg_color
+        self.update_graphics()
+
+        self.bind(pos=self.update_graphics, size=self.update_graphics)
+
+    def update_graphics(self, *args):
+        self.canvas.before.clear()
+        with self.canvas.before:
+            Color(*self.bg_color)
+            self.rect = Rectangle(pos=self.pos, size=self.size)
+            Color(*self.border_color)
+            Line(rectangle=(self.x, self.y, self.width, self.height), width=dp(1))
+
+    def on_press(self):
+        super(BorderedButton, self).on_press()
+        self.bg_color = (0.3, 0.3, 0.3, 1)  # Change Color on Press
+        self.update_graphics()
+
+    def on_release(self):
+        super(BorderedButton, self).on_release()
+        self.bg_color = (0, 0, 0, 1)  # Change Color on Release
+        self.update_graphics()
+
+class BulletApp(App):
     ICON_PATH = "src/logo.png"
     WATERMARK_PATH = "src/watermark.png"
     LOGS_TYPE = "Logs"
@@ -79,6 +109,7 @@ class MyApp(App):
         self.find_variables = {}
         self.progreso = 0
         self.icon = self.ICON_PATH
+        self.dropdown_buttons = []
 
         self.layout = GridLayout(cols=1)
 
@@ -95,7 +126,7 @@ class MyApp(App):
         # Threads Configuration
         threads_label = Label(text="Threads:")
         self.threads_input = TextInput(input_filter="int", multiline=False)
-        threads_layout = BoxLayout(orientation='horizontal', padding=10, spacing=5, size_hint=(1, 0.15))
+        threads_layout = BoxLayout(orientation='horizontal', padding=dp(10), spacing=dp(5), size_hint=(1, 0.15))
         threads_layout.add_widget(threads_label)
         threads_layout.add_widget(self.threads_input)
         threads_layout.add_widget(self.options_spinner)
@@ -103,13 +134,13 @@ class MyApp(App):
 
         # Buttons Configuration
         buttons_layout = BoxLayout(orientation='horizontal', padding=dp(10), spacing=dp(5), size_hint=(1, 0.16))
-        self.load_button = Button(text="Load Combo")
+        self.load_button = BorderedButton(text="Load Combo", background_color=(0, 0, 0, 1))
         self.load_button.bind(on_press=self.load_file)
-        self.run_button = Button(text="Run Combo")
+        self.run_button = BorderedButton(text="Run Combo", background_color=(0, 0, 0, 1))
         self.run_button.bind(on_press=self.run_file)
-        self.proxies_button = Button(text="Load Proxies")
+        self.proxies_button = BorderedButton(text="Load Proxies", background_color=(0, 0, 0, 1))
         self.proxies_button.bind(on_press=self.load_proxies)
-        self.load_instructions_button = Button(text="Load Config")
+        self.load_instructions_button = BorderedButton(text="Load Config", background_color=(0, 0, 0, 1))
         self.load_instructions_button.bind(on_press=self.load_instructions)
         buttons_layout.add_widget(self.load_button)
         buttons_layout.add_widget(self.run_button)
@@ -149,30 +180,36 @@ class MyApp(App):
             scroll_view.add_widget(box)
             return scroll_view, label
         
-        def create_scrollable_label_with_clear_button(text, clear_text, color, type_):
+        def create_scrollable_label_with_clear_button(text, color, info_text):
             scroll_view, label = create_scrollable_label(text, color)
-            clear_button = Button(text="Clean", size_hint=(1, 0.75), background_color=(0, 0, 0, 0.5))
-            clear_button.bind(on_press=lambda instance: setattr(label, 'text', clear_text))
-            copy_button = Button(text="Copy", size_hint=(1, 0.75), background_color=(0, 0, 0, 0.5))
-            copy_button.bind(on_press=lambda instance: Clipboard.copy(label.text))
-            view_button = Button(text="FullScreen", size_hint=(1, 0.75), background_color=(0, 0, 0, 0.5))
-            view_button.bind(on_press=lambda instance: self.show_full_screen(label.text))
-            buttons_box = BoxLayout(orientation='vertical', size_hint=(1, 0.75))
-            save_button = Button(text="Save", size_hint=(1, 0.75), background_color=(0, 0, 0, 0.5))
-            save_button.bind(on_press=lambda instance: self.save_content(instance=self, type_=type_))
-            buttons_box = BoxLayout(orientation='vertical', size_hint=(1, 0.75))
-            buttons_box.add_widget(clear_button)
-            buttons_box.add_widget(copy_button)
-            buttons_box.add_widget(view_button)
-            buttons_box.add_widget(save_button)
+
+            info_label = Label(text=info_text, halign="left", valign="center", color=(1, 1, 1, 1))
+
             box_with_buttons = BoxLayout(orientation='vertical')
             box_with_buttons.add_widget(scroll_view)
-            box_with_buttons.add_widget(buttons_box)
-            return box_with_buttons, label
 
-        self.result_logs_box, self.result_logs_label = create_scrollable_label_with_clear_button("Logs:\n", "Logs:\n", (1, 1, 1, 1), type_="Logs")
-        self.result_hits_box, self.result_hits_label = create_scrollable_label_with_clear_button("Hits:\n", "Hits:\n", (0, 1, 0, 1), type_="Hits")
-        self.result_deads_box, self.result_deads_label = create_scrollable_label_with_clear_button("Deads:\n", "Deads:\n", (1, 0, 0, 1), type_="Deads")
+            return box_with_buttons, label, info_label
+    
+        self.result_logs_box, self.result_logs_label, self.result_logs_info_label = create_scrollable_label_with_clear_button("Logs:\n", (1, 1, 1, 1), info_text="CPM: 0")
+        self.result_hits_box, self.result_hits_label, self.result_hits_info_label = create_scrollable_label_with_clear_button("Hits:\n", (0, 1, 0, 1), info_text="Hits: 0")
+        self.result_deads_box, self.result_deads_label, self.result_deads_info_label = create_scrollable_label_with_clear_button("Deads:\n", (1, 0, 0, 1), info_text="Deads: 0")
+
+        # Stats and Tools Configuration
+        stats_tools_layout = BoxLayout(orientation='horizontal', size_hint=(1, 0.17), padding=dp(10), spacing=dp(5))
+
+        # Stats
+        stats_layout = BoxLayout(orientation='horizontal', spacing=dp(5))
+        stats_layout.add_widget(self.result_logs_info_label)
+        stats_layout.add_widget(self.result_hits_info_label)
+        stats_layout.add_widget(self.result_deads_info_label)
+        stats_tools_layout.add_widget(stats_layout)
+        
+        # Tools Dropdown
+        tools_button, tools_dropdown = self.create_dropdown_menu(None, None)
+        stats_tools_layout.add_widget(tools_button)
+
+        # Stats and Tools Set
+        self.layout.add_widget(stats_tools_layout)
 
         self.result_grid.add_widget(self.result_logs_box)
         self.result_grid.add_widget(self.result_hits_box)
@@ -193,6 +230,95 @@ class MyApp(App):
         main_layout.add_widget(secondary_layout)
 
         return main_layout
+
+    def create_dropdown_menu(self, label, type_):
+        dropdown = DropDown()
+
+        # Use secondary dropdowns to handle the options
+        def create_button_action(current_text, current_label, current_type, current_dropdown):
+            secondary_dropdown = self.create_secondary_dropdown(current_text)
+            def button_action(instance):
+                secondary_dropdown.open(instance)
+            return button_action
+
+        # Add all primary options to the main dropdown
+        for text in ["Clean", "Copy", "FullScreen", "Save"]:
+            btn = BorderedButton(text=text, size_hint_y=None, height=dp(40), background_color=(0, 0, 0, 1))
+            btn.bind(on_release=create_button_action(text, label, type_, dropdown))
+            dropdown.add_widget(btn)
+            self.dropdown_buttons.append(btn)
+
+        # The main button for the dropdown menu
+        main_button = BorderedButton(text='Tools', size_hint=(0.5, 1), background_color=(0, 0, 0, 1))
+        main_button.bind(on_release=dropdown.open)
+        dropdown.bind(on_select=lambda instance, x: setattr(main_button, 'text', x))
+
+        return main_button, dropdown
+
+    def create_secondary_dropdown(self, primary_option):
+        dropdown = DropDown()
+
+        def secondary_option_selected(instance):
+            # Handle the selected option
+            if primary_option == "Clean":
+                if instance.text == "Hits":
+                    self.result_hits_label.text = "Hits:\n"  
+                elif instance.text == "Deads":
+                    self.result_deads_label.text = "Deads:\n"  
+                elif instance.text == "Logs":
+                    self.result_logs_label.text = "Logs:\n"  
+            
+            elif primary_option == "Copy":
+                if instance.text == "Hits":
+                    Clipboard.copy(self.result_hits_label.text)
+                elif instance.text == "Deads":
+                    Clipboard.copy(self.result_deads_label.text)
+                elif instance.text == "Logs":
+                    Clipboard.copy(self.result_logs_label.text)
+
+            elif primary_option == "FullScreen":
+                if instance.text == "Hits":
+                    self.show_full_screen(self.result_hits_label.text)
+                elif instance.text == "Deads":
+                    self.show_full_screen(self.result_deads_label.text)
+                elif instance.text == "Logs":
+                    self.show_full_screen(self.result_logs_label.text)
+
+            elif primary_option == "Save":
+                if instance.text == "Hits":
+                    self.save_content(instance=self, type_="Hits")
+                elif instance.text == "Deads":
+                    self.save_content(instance=self, type_="Deads")
+                elif instance.text == "Logs":
+                    self.save_content(instance=self, type_="Logs")
+
+            dropdown.dismiss()
+
+        for option in ["Hits", "Deads", "Logs"]:
+            btn = BorderedButton(text=option, size_hint_y=None, height=dp(40), background_color=(0, 0, 0, 1))
+            btn.bind(on_release=secondary_option_selected)
+            dropdown.add_widget(btn)
+
+        return dropdown
+
+    def button_action_and_dismiss(self, instance, text, label, type_, dropdown):
+        self.button_action(text, label, type_)(instance)  # Call the button action
+        dropdown.dismiss()  # Close the dropdown
+
+    def button_action(self, text, label, type_):
+        def action(instance):
+            self.dropdown_option_selected(text, label, type_)
+        return action
+
+    def dropdown_option_selected(self, text, label, type_):
+        if text == "Clean":
+            label.text = type_ + ":\n"
+        elif text == "Copy":
+            Clipboard.copy(label.text)
+        elif text == "FullScreen":
+            self.show_full_screen(label.text)
+        elif text == "Save":
+            self.save_content(instance=self, type_=type_)
 
     def on_proxy_spinner_selection(self, instance, value):
         """
@@ -665,7 +791,6 @@ class MyApp(App):
         else:
             self.result_logs_label.text += f"\nVariable {variable_name} not found or empty"
 
-
     @staticmethod
     def _extract_substring(input_string, start_delimiter, end_delimiter):
         """Extract a substring between two delimiters."""
@@ -686,7 +811,6 @@ class MyApp(App):
                 for line1 in file_lines1:
                     proxy.add(line1.strip())
                 proxyDict = self.parse_proxy(random.choice(list(proxy)), self.proxy_spinner.text.swapcase())
-                print(proxyDict)
             else: proxyDict=None
             if selected_option == "Bees":
                 self._load_selected_instructions(self, selected_file="configs/bees.txt")
@@ -703,10 +827,21 @@ class MyApp(App):
                 self.update_gui(result)
                 progress = (self.progreso + 1) / self.total_instructions * 100
                 self.progress_bar.value += progress
-            
+            self.check_times.append(time.time())
+            self.update_cpm()
             self.worker_threads_running -= 1  # Decrement the count of running threads
             task_queue.task_done()
         
+    def update_cpm(self, dt=None):  # Dt is the delta time between calls
+        current_time = time.time()
+        # Remove all the times that are older than 60 seconds
+        self.check_times = [t for t in self.check_times if current_time - t < 60]
+        cpm = len(self.check_times)
+        self.update_info_label(self.result_logs_info_label, f"CPM: {cpm}")
+
+    def update_info_label(self, label, info_text):
+        label.text = info_text
+
     def check_threads_finished(self, dt):
         if self.worker_threads_running == 0:
             print("Threads Finished")
@@ -721,13 +856,21 @@ class MyApp(App):
                 return
             if "HIT" in result:
                 self.result_hits_label.text += result
+                self.hits_count += 1
+                self.update_info_label(self.result_hits_info_label, f"Hits: {self.hits_count}")
             elif "DEAD" in result:
                 self.result_deads_label.text += result
+                self.deads_count += 1
+                self.update_info_label(self.result_deads_info_label, f"Deads: {self.deads_count}")
             else:
                 self.result_logs_label.text += result
         Clock.schedule_once(update)
 
     def run_file(self, instance):
+        Clock.schedule_interval(self.update_cpm, 1)
+        self.check_times = []
+        self.deads_count = 0
+        self.hits_count = 0
         self.impreso = False
         self.state_label.text = "State: Running"
         self.progress_bar.value = 0
@@ -750,7 +893,6 @@ class MyApp(App):
             return
 
         accsLista = []
-        
         acssLines = self.combo.split('\n')
         for line in acssLines:
             accsLista.append(line.strip())
@@ -759,10 +901,10 @@ class MyApp(App):
 
         self.worker_threads_running = 0
 
-        task_queue = Queue()
+        self.task_queue = Queue()
         for acc in acssLines:
-            task_queue.put(acc)
-        self.total_instructions = task_queue.qsize()
+            self.task_queue.put(acc)
+        self.total_instructions = self.task_queue.qsize()
         proxy = set()
         file_lines1 = self.proxies.split('\n')
         for line1 in file_lines1:
@@ -771,7 +913,7 @@ class MyApp(App):
         # Start the worker threads
         for _ in range(self.threads):
             self.worker_threads_running += 1  # Increment the count of running threads
-            thread = Thread(target=self.worker, args=(task_queue, selected_option))
+            thread = Thread(target=self.worker, args=(self.task_queue, selected_option))
             thread.start()
 
         Clock.schedule_interval(self.check_threads_finished, 1)
@@ -779,4 +921,4 @@ class MyApp(App):
         return
 
 if __name__ == '__main__':
-    MyApp().run()
+    BulletApp().run()
