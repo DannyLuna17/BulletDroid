@@ -13,6 +13,8 @@ Inspired by OpenBullet, this repository offers a powerful webtesting toolkit tai
 - **Custom Configs**: Offers flexibility to customize the checking process with config files.
 - **Multi-threading Support**: Enables faster processing.
 - **Proxy Support**: Provides an added layer of security during account checks.
+- **Data Scraping**: Extracts data from websites.
+- **Pentesting**: Tests the security of websites.
 
 NOTE: You must allow Storage Permission at App Settings
 
