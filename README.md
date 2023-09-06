@@ -2,9 +2,6 @@ BulletDroid
 =======
 [![CodeFactor](https://www.codefactor.io/repository/github/lunapy17/bulletdroid/badge)](https://www.codefactor.io/repository/github/lunapy17/bulletdroid)
 
-![watermark (2)](https://github.com/LunaPy17/BulletDroid/assets/69711934/0d3e1350-5edf-4dd3-b6aa-b02eea41911d)
-
-
 Inspired by OpenBullet, this repository offers a powerful webtesting toolkit tailored for Android devices. The application presents an attempt of a user-friendly GUI built with Kivy, powered by a Python backend. Designed for a mobile experience, this tool is designed to execute requests, being suitable for data scraping and pentesting using custom configs, multi-threading, and proxy support.
 
 ## Features
@@ -12,7 +9,7 @@ Inspired by OpenBullet, this repository offers a powerful webtesting toolkit tai
 - **User-friendly Interface**: An intuitive GUI built with the Kivy framework.
 - **Custom Configs**: Offers flexibility to customize the checking process with config files.
 - **Multi-threading Support**: Enables faster processing.
-- **Proxy Support**: Provides an added layer of security during account checks.
+- **Proxy Support**: Accepts all types of proxy. (HTTP, SOCKS4, SOCKS5, SOCKS4A, SOCKS5H)
 - **Data Scraping**: Extracts data from websites.
 - **Pentesting**: Tests the security of websites.
 
@@ -20,7 +17,7 @@ NOTE: You must allow Storage Permission at App Settings
 
 ![image](https://github.com/LunaPy17/BulletDroid/assets/69711934/eedb332d-4c07-4f4d-9973-8ba39502c9b1)
 
-![image](https://github.com/LunaPy17/BulletDroid/assets/69711934/9cd3aba8-de89-4f10-b73e-06190c5c97a0)
+![image](https://github.com/LunaPy17/BulletDroid/assets/69711934/591b7d87-2d3d-4e2a-b851-337ff98d9d99)
 
 ## Config Blocks
 
