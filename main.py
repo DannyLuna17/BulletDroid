@@ -96,7 +96,7 @@ class BorderedSpinner(Spinner, BorderedButton):
         self._dropdown.clear_widgets()
         for value in self.values:
             # Use BorderedButton for each option
-            item = BorderedButton(text=value, size_hint_y=None, height=self.height / 2.5, background_color=(0, 0, 0, 1))
+            item = BorderedButton(text=value, size_hint_y=None, height=self.height / 1.8, background_color=(0, 0, 0, 1))
             item.bind(on_release=lambda btn: self._dropdown.select(btn.text))
             self._dropdown.add_widget(item)
 
@@ -843,8 +843,10 @@ class BulletApp(App):
             headers = json.loads(headers)
 
         response = None
+        
         try: self.timeout_n = int(self.timeout_input.text)
-        except: self.timeout_n = 45
+        except ValueError: self.timeout_n = 45
+
         if type_ == 'GET':
             try: response = self.my_session.get(url, headers=headers_dict, proxies=self.proxyDict, timeout=self.timeout_n, verify=False)
             except exceptions.ReadTimeout:
@@ -994,7 +996,7 @@ class BulletApp(App):
                 break
             acc = task_queue.get()
             try: email, passwordO = acc.split(':')
-            except:
+            except ValueError:
                 email = "NULL123456@gmail.com"
                 passwordO = "NULL123456"
             if self.proxies != "":
@@ -1114,7 +1116,7 @@ class BulletApp(App):
         try:
             if not self.deads_count:
                 self.deads_count = 0
-        except:
+        except AttributeError:
             self.deads_count = 0 
             self.hits_count = 0
         self.impreso = False
@@ -1147,7 +1149,7 @@ class BulletApp(App):
         self.run_button.bind(on_press=self.stop_file)
 
         try: self.start_n = int(self.start_input.text)
-        except: self.start_n = 45
+        except ValueError: self.start_n = 45
 
         accsLista = []
         acssLines = self.combo.split('\n')[self.start_n:]
