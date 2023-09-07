@@ -15,9 +15,9 @@ Inspired by OpenBullet, this repository offers a powerful webtesting toolkit tai
 
 NOTE: You must allow Storage Permission at App Settings
 
-![image](https://github.com/LunaPy17/BulletDroid/assets/69711934/eedb332d-4c07-4f4d-9973-8ba39502c9b1)
+![image](https://github.com/LunaPy17/BulletDroid/assets/69711934/eb330c2b-f35c-4869-ac04-e1b41dfa7e2b)
 
-![image](https://github.com/LunaPy17/BulletDroid/assets/69711934/591b7d87-2d3d-4e2a-b851-337ff98d9d99)
+![image](https://github.com/LunaPy17/BulletDroid/assets/69711934/93397795-9edb-4ecb-a481-d815e6f9ba08)
 
 ## Config Blocks
 
