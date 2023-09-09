@@ -29,6 +29,8 @@ NOTE: You can see config examples in [Configs Carpet](https://github.com/LunaPy1
 * PRINT - Show at logs a Variable or String
 * RESULT - Return the response at display.
 
+NOTE: Android Users must allow the Storage Permission in App Settings
+
 ## Requirements
 
 * python 3.x
