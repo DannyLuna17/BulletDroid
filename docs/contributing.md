@@ -31,6 +31,9 @@ if you want to contribute to BulletDroid, please follow the instructions below w
 2. **Create a branch**: Make a branch in your forked project with a descriptive name like `bug-fix` or `new-feature`.
 3. **Submit a pull request**: Once you've made your changes, submit a pull request to be reviewed and merged.
 
+## Questions
+
+If you have any questions or suggestions about the project, contact me at Telegram ([@LunaPy17](https://t.me/DannyLuna))
 
 ## Acknowledgements
 
