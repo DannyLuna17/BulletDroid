@@ -1,4 +1,4 @@
-# Standar imports
+# Standard imports
 import json
 import os
 import re
