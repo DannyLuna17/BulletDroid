@@ -52,6 +52,12 @@ pip install -r requirements.txt
 python main.py
 ```
 
+## Contributing
+
+Thanks for your interest in contributing! Your contributions are highly appreciated. Feel free to open an issue or submit a pull request for any bugs/improvements.
+
+Please read the [Contributing Guidelines](https://github.com/LunaPy17/BulletDroid/blob/main/docs/contributing.md) for more details about how to contribute and support the project.
+
 ## License
 
 This project is licensed under the GNU General Public License v3.0 [License](https://github.com/LunaPy17/BulletDroid/blob/main/LICENSE). See the LICENSE file for details.
