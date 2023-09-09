@@ -1,0 +1,4 @@
+# Search random sites (Testing RND function)
+BLOCK=REQUEST-1|URL=https://RND(LENGTH>5, CHARS>abcdefghijklmnopqrstuvwxyz).com/|TYPE=GET
+BLOCK=RESULT|VALUE=200|VAR=<REQUEST-1.status_code>|CATEGORY=HIT|RETURN=URL -> <REQUEST-1.url>
+BLOCK=RESULT|VALUE=4|VAR=<REQUEST-1.status_code>|CATEGORY=DEAD
