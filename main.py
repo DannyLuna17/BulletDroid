@@ -32,6 +32,7 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.spinner import Spinner
 from kivy.uix.textinput import TextInput
+from kivy.uix.screenmanager import ScreenManager, Screen
 from retry_requests import retry
 from requests import exceptions
 
@@ -56,15 +57,20 @@ def extract_substring(data, first, last):
         return None
 
 class BorderedButton(Button):
+    """
+    Custom button with a border and background color.
+    """
     def __init__(self, border_color=(1, 1, 1, 1), bg_color=(0, 0, 0, 0), **kwargs):
+        # Set the background color to transparent by default
         super(BorderedButton, self).__init__(**kwargs)
         self.border_color = border_color
         self.bg_color = bg_color
         self.update_graphics()
 
         self.bind(pos=self.update_graphics, size=self.update_graphics)
-
+        
     def update_graphics(self, *args):
+        # Redraw the background and border colors
         self.canvas.before.clear()
         with self.canvas.before:
             Color(*self.bg_color)
@@ -73,20 +79,27 @@ class BorderedButton(Button):
             Line(rectangle=(self.x, self.y, self.width, self.height), width=dp(1))
 
     def on_press(self):
+        # Change the button color on press
         super(BorderedButton, self).on_press()
         self.bg_color = (0.3, 0.3, 0.3, 1)  # Change Color on Press
         self.update_graphics()
 
     def on_release(self):
+        # Change the button color on release
         super(BorderedButton, self).on_release()
         self.bg_color = (0, 0, 0, 1)  # Change Color on Release
         self.update_graphics()
 
 class BorderedSpinner(Spinner, BorderedButton):
+    """
+    Custom spinner with a border and background color.
+    """
     def __init__(self, **kwargs):
+        # Set the background color to transparent by default
         super(BorderedSpinner, self).__init__(**kwargs)
         
     def on_press(self, *args):
+
         super(BorderedSpinner, self).on_press()
 
     def on_release(self, *args):
@@ -100,35 +113,30 @@ class BorderedSpinner(Spinner, BorderedButton):
             item.bind(on_release=lambda btn: self._dropdown.select(btn.text))
             self._dropdown.add_widget(item)
 
-class BulletApp(App):
+class ScreenManagement(ScreenManager):
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.add_widget(MainScreen(name='main'))
+
+class MainScreen(Screen):
+    # Constants
     ICON_PATH = "src/logo.png"
     WATERMARK_PATH = "src/watermark.png"
     LOGS_TYPE = "Logs"
     HITS_TYPE = "Hits"
     DEADS_TYPE = "Deads"
 
-    def show_full_screen(self, text):
-        """Displays a fullscreen popup with the given text."""
-
-        full_screen_layout = BoxLayout(orientation='vertical')
-        full_screen_label = TextInput(text=text, readonly=True, multiline=True)
-        close_button = Button(text="Close", size_hint=(1, 0.1))
-
-        full_screen_layout.add_widget(full_screen_label)
-        full_screen_layout.add_widget(close_button)
-
-        self.full_screen_popup = Popup(title="View Content", content=full_screen_layout, size_hint=(0.9, 0.9))
-        close_button.bind(on_press=self.full_screen_popup.dismiss)
-        self.full_screen_popup.open()
-
-    def build(self):
-        # Initialize variables
+    def __init__(self, **kwargs):
+        # Initialize the screen
+        super(MainScreen, self).__init__(**kwargs)
 
         self.combo, self.proxies = "", ""
         self.variables = {}
         self.responses = {}
         self.headers = {}
         self.cookies = {}
+        self.response_codes = {}
+        self.urls = {}
         self.progreso = 0
         self.dropdown_buttons = []
         self.is_stopping = False
@@ -140,6 +148,8 @@ class BulletApp(App):
         
         self.layout = GridLayout(cols=1)
 
+
+        # Add the State Label
         self.state_label = Label(text="State: Sleeping", size_hint=(0.3, 0.1), pos_hint={'right': 1, 'bottom': 1}, halign="right", valign="bottom", font_size=dp(20))
         self.layout.add_widget(self.state_label)
 
@@ -147,11 +157,11 @@ class BulletApp(App):
         self.progress_bar = ProgressBar(max=100, value=0, size_hint=(1, 0.05))
         self.layout.add_widget(self.progress_bar)
 
-        # Spinner Configuration
+        # Add Config Spinner
         self.options_spinner = BorderedSpinner(text='Select Config', values=('Bees', "Custom"), background_color=(0, 0, 0, 1))
         self.options_spinner.bind(text=self.on_options_spinner_selection)
 
-        # Threads Configuration
+        # Add Threads Input
         threads_label = Label(text="Threads:")
         self.threads_input = TextInput(input_filter="int", multiline=False)
         threads_layout = BoxLayout(orientation='horizontal', padding=dp(10), spacing=dp(5), size_hint=(1, 0.15))
@@ -163,7 +173,7 @@ class BulletApp(App):
         # Buttons Configuration
         buttons_layout = BoxLayout(orientation='horizontal', padding=dp(15), spacing=dp(10), size_hint=(1, 0.16))
         self.load_button = BorderedButton(text="Combo", background_color=(0, 0, 0, 1))
-        self.load_button.bind(on_press=self.load_file)
+        self.load_button.bind(on_press=self.load_combo)
         self.run_button = BorderedButton(text="Start", background_color=(0, 0, 0, 1))
         self.run_button.bind(on_press=self.run_file)
         self.proxies_button = BorderedButton(text="Proxies", background_color=(0, 0, 0, 1))
@@ -172,7 +182,7 @@ class BulletApp(App):
         buttons_layout.add_widget(self.run_button)
         buttons_layout.add_widget(self.proxies_button)
 
-        # Spinner for proxy selection
+        # Add Proxy Type Spinner
         self.proxy_spinner = BorderedSpinner(text='No Proxy', values=('No Proxy', 'HTTP', 'HTTPS', 'SOCKS4', 'SOCKS5'), background_color=(0, 0, 0, 1))
         self.proxy_spinner.bind(text=self.on_proxy_spinner_selection)
 
@@ -210,11 +220,13 @@ class BulletApp(App):
             
             return box_with_buttons, labels, content_box
     
+        # Create the results boxes and labels
         self.result_logs_box, self.result_logs_labels, self.logs_content_box = create_scrollable_label_with_clear_button("Logs:\n", (1, 1, 1, 1))
         self.result_hits_box, self.hits_labels, self.hits_content_box = create_scrollable_label_with_clear_button("Hits: 0\n", (0, 1, 0, 1))
         self.result_deads_box, self.deads_labels, self.deads_content_box = create_scrollable_label_with_clear_button("Deads: 0\n", (1, 0, 0, 1))
 
         def info_label(text):
+            # Create a label with the given text
             info_label = Label(text=text, halign="left", valign="center", color=(1, 1, 1, 1))
             info_label.bind(texture_size=info_label.setter('size'))
             return info_label
@@ -226,7 +238,6 @@ class BulletApp(App):
         self.cpm_label = info_label("CPM: 0")
         self.time_label = info_label("00:00:00")
         
-
         stats_layout = BoxLayout(orientation='horizontal', spacing=dp(5))
         stats_layout.add_widget(self.cpm_label)
         stats_layout.add_widget(self.time_label)
@@ -236,7 +247,7 @@ class BulletApp(App):
         tools_button, tools_dropdown = self.create_dropdown_menu(None, None)
         stats_tools_layout.add_widget(tools_button)
 
-        # Set up configuration pop up button
+        # Config Button (Popup)
         self.config_popup_button = BorderedButton(text="Configuration", size_hint=(0.5, 1), background_color=(0, 0, 0, 1))
         self.config_popup_button.bind(on_press=self.show_config_popup)
         stats_tools_layout.add_widget(self.config_popup_button)
@@ -261,9 +272,25 @@ class BulletApp(App):
 
         # Add the secondary layout to the main layout
         main_layout.add_widget(secondary_layout)
+        self.add_widget(main_layout)
+        return 
+    
+    def show_full_screen(self, text):
+        """
+        Show a fullscreen popup with the given text.
+        """
 
-        return main_layout
+        full_screen_layout = BoxLayout(orientation='vertical')
+        full_screen_label = TextInput(text=text, readonly=True, multiline=True)
+        close_button = Button(text="Close", size_hint=(1, 0.1))
 
+        full_screen_layout.add_widget(full_screen_label)
+        full_screen_layout.add_widget(close_button)
+
+        self.full_screen_popup = Popup(title="View Content", content=full_screen_layout, size_hint=(0.9, 0.9))
+        close_button.bind(on_press=self.full_screen_popup.dismiss)
+        self.full_screen_popup.open()
+        
     def schedule_update_labels(self, box, labels, text):
         Clock.schedule_once(lambda dt: self._update_labels(box, labels, text))
 
@@ -271,18 +298,28 @@ class BulletApp(App):
         self.add_text_to_labels(box, labels, text)
 
     def add_text_to_labels(self, content_box, labels, new_text):
+        """
+        Add the given text to the labels.
+        :param content_box: The box containing the labels.
+        :param labels: The labels to add the text to.
+        :param new_text: The text to add.
+        """
+
+        # Get the last label and its text
         current_label = labels[-1]
         current_text = current_label.text + new_text
         lines = current_text.split('\n')
 
+        # Set the color of the new text
         if "TOCHECK" in new_text: current_label.color = (1, 1, 0, 1)
         else: color = current_label.color
         
-        # Solo trabajamos con la última label y las nuevas líneas
+        # Only keep the last 100 lines
         remaining_lines = 100 - len(current_label.text.split('\n'))
         current_label.text = '\n'.join(lines[:remaining_lines])
         lines = lines[remaining_lines:]
         
+        # Add the remaining lines to new labels
         while lines:
             new_label = Label(text="", font_size=dp(15), size_hint_y=None, size_hint_x=None, halign="left", valign="top", color=color)
             new_label.bind(texture_size=new_label.setter('size'))
@@ -314,6 +351,7 @@ class BulletApp(App):
         """
         Clean the given labels box and reset the text of the first label.
         """
+
         # Hold the first label and remove the rest
         first_label = labels[0]
         for label in labels[1:]:
@@ -328,17 +366,22 @@ class BulletApp(App):
         """
         Return the full text of the given labels.
         """
+
         full_text = ""
         for label in labels:
             full_text += label.text
         return full_text
-
 
     def on_options_spinner_selection(self, instance, value):
         if value == "Custom":
             self.load_instructions(instance)
 
     def create_dropdown_menu(self, label, type_):
+        """
+        Create a dropdown menu with the given label and type.
+        :param label: The label to be used in the dropdown.
+        :param type_: The type to be used in the dropdown.
+        """
         dropdown = DropDown()
 
         # Use secondary dropdowns to handle the options
@@ -363,6 +406,12 @@ class BulletApp(App):
         return main_button, dropdown
 
     def create_secondary_dropdown(self, primary_option):
+        """
+        Create a secondary dropdown menu with the given primary option.
+        :param primary_option: The primary option to be used in the dropdown.
+        """
+
+        # Create the secondary dropdown
         dropdown = DropDown()
 
         def secondary_option_selected(instance):
@@ -388,7 +437,7 @@ class BulletApp(App):
 
             elif primary_option == "FullScreen":
                 if instance.text == "Hits":
-                    self.show_full_screen(self.get_box_content(self.result_logs_labels))
+                    self.show_full_screen(self.get_box_content(self.hits_labels))
                 elif instance.text == "Deads":
                     self.show_full_screen(self.get_box_content(self.deads_labels))
                 elif instance.text == "Logs":
@@ -404,6 +453,7 @@ class BulletApp(App):
 
             dropdown.dismiss()
 
+        # Add all secondary options to the dropdown
         for option in ["Hits", "Deads", "Logs"]:
             btn = BorderedButton(text=option, size_hint_y=None, height=dp(40), background_color=(0, 0, 0, 1))
             btn.bind(on_release=secondary_option_selected)
@@ -411,21 +461,21 @@ class BulletApp(App):
 
         return dropdown
 
-    def button_action_and_dismiss(self, instance, text, label, type_, dropdown):
-        self.button_action(text, label, type_)(instance)  # Call the button action
-        dropdown.dismiss()  # Close the dropdown
+    def dropdown_option_selected(self, option, label, type_):
+        """
+        Handle the selected dropdown option.
+        :param text: The selected option.
+        :param label: The label to be used in the dropdown.
+        :param type_: The type to be used in the dropdown.
+        """
 
-    def button_action(self, text, label, type_):
-        return self.dropdown_option_selected(text, label, type_)
-
-    def dropdown_option_selected(self, text, label, type_):
-        if text == "Clean":
+        if option == "Clean":
             label.text = type_ + ":\n"
-        elif text == "Copy":
+        elif option == "Copy":
             Clipboard.copy(label.text)
-        elif text == "FullScreen":
+        elif option == "FullScreen":
             self.show_full_screen(label.text)
-        elif text == "Save":
+        elif option == "Save":
             self.save_content(instance=self, type_=type_)
 
     def on_proxy_spinner_selection(self, instance, value):
@@ -474,9 +524,8 @@ class BulletApp(App):
         buttons_layout.add_widget(close_button)
         content.add_widget(buttons_layout)
 
-        # Create the popup
+        # Create and open the popup
         self.config_popup = Popup(title="Configuration", content=content, size_hint=(0.9, 0.9), on_dismiss=self.update_config)
-        # Update TextInput text when the popup is closed
         self.config_popup.open()
 
     def update_config(self, instance):
@@ -494,6 +543,7 @@ class BulletApp(App):
         :param instance: The button instance triggering this method.
         """
 
+        # Get the home path
         home_path = os.path.expanduser("~")
         if ":" not in home_path: home_path = "/storage/emulated/0/"
 
@@ -508,6 +558,7 @@ class BulletApp(App):
         content.add_widget(file_chooser)
         content.add_widget(save_button)
         
+        # Create and open the popup
         self.save_popup = Popup(title="Save Content", content=content, size_hint=(0.9, 0.9))
         self.save_popup.open()
 
@@ -522,6 +573,7 @@ class BulletApp(App):
         # Define a filename
         filename = f"{type_}.txt"
         
+        # Save the content to the file
         with open(os.path.join(path, filename), 'w', encoding="utf-8", errors="ignore") as file:
             if type_ == self.LOGS_TYPE:
                 file.write(self.get_box_content(self.result_logs_labels))
@@ -531,23 +583,11 @@ class BulletApp(App):
                 file.write(self.get_box_content(self.deads_labels))
         self.save_popup.dismiss()
 
-    def _update_text_size(self, instance, value):
-        """
-        Update the width of the text widget based on the new value.
-        
-        :param instance: The text widget instance.
-        :param value: The new size value.
-        """
-        instance.text_size = (value[0], None)
+    def _update_text_size(self, instance, size_value):
+        instance.text_size = (size_value[0], None)
 
-    def _update_text_height(self, instance, value):
-        """
-        Update the height of the text widget based on the texture size.
-        
-        :param instance: The text widget instance.
-        :param value: The new size value.
-        """
-        instance.text_size = (value, None)
+    def _update_text_height(self, instance, height_value):
+        instance.text_size = (height_value, None)
         instance.height = instance.texture_size[1]
 
     def load_instructions(self, instance):
@@ -557,8 +597,11 @@ class BulletApp(App):
         :param instance: The button instance triggering this method.
         """
 
+        # Get the home path
         home_path = os.path.expanduser("~")
         if ":" not in home_path: home_path = "/storage/emulated/0/"
+
+        # Create the FileChooser and the load button
         file_chooser = FileChooserListView(path=home_path, filters=['*.txt'])
         self.choose_file_popup = Popup(title="Load Config", content=file_chooser, size_hint=(0.9, 0.9))
 
@@ -572,7 +615,7 @@ class BulletApp(App):
         
         :param email: The email to be processed.
         :param passwordO: The corresponding password.
-        :param proxyDict: The proxy settings.
+        :param proxyDict: The proxy dictionary to be used in the requests.
         :return: Result message if any.
         """
 
@@ -580,9 +623,9 @@ class BulletApp(App):
         if not getattr(self, 'instructions', None):
             return "\n[*] You must load instructions first!"
         
-        # Initialize session
-        self.my_session = retry()
-        adapter = HTTPAdapter(pool_connections=1000, pool_maxsize=1000, max_retries=1000)
+        # Initialize the session and mount the adapter
+        self.my_session = retry(retries=3)
+        adapter = HTTPAdapter(pool_connections=1000, pool_maxsize=1000, max_retries=3)
         self.my_session.mount('http://', adapter)
         self.my_session.mount('https://', adapter)
 
@@ -595,13 +638,11 @@ class BulletApp(App):
             
         return None
 
-    def load_file(self, instance):
-        """Load the combo file."""
+    def load_combo(self, instance):
         self._setup_file_chooser("Load Combo", self._load_selected_file)
         self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, "\n[*] Loading Combo...")
 
     def load_proxies(self, instance):
-        """Load the proxies file."""
         self._setup_file_chooser("Load Proxies", self._load_selected_proxies)
         self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, "\n[*] Loading Proxies...")
             
@@ -646,10 +687,13 @@ class BulletApp(App):
         :param title: Title for the popup.
         :param submit_callback: Callback function to handle the selected file.
         """
+
+        # Get the home path
         home_path = os.path.expanduser("~")
         if ":" not in home_path:
             home_path = "/storage/emulated/0/"
         
+        # Create the FileChooser and the load button
         file_chooser = FileChooserListView(path=home_path, filters=['*.txt'])
         self.choose_file_popup = Popup(title=title, content=file_chooser, size_hint=(0.7, 0.7))
         
@@ -657,6 +701,13 @@ class BulletApp(App):
         self.choose_file_popup.open()
 
     def parse_proxy(self, proxy_str, proxy_type):
+        """
+        Parse the given proxy string and return a dictionary with the proxy settings.
+        :param proxy_str: The proxy string to parse.
+        :param proxy_type: The proxy type to use.
+        :return: Dictionary with the proxy settings.
+        """
+
         proxy_dict = {}
 
         # Check for valid proxy types
@@ -734,6 +785,10 @@ class BulletApp(App):
         self.password = password
         self.proxyDict = proxyDict
 
+        # Check if the line is a comment
+        if instruction[0] == "#":
+            return
+
         # Split instruction into its components
         components = instruction.split('|')
         params = {key: value for key, value in (part.split('=', 1) for part in components)}
@@ -748,6 +803,7 @@ class BulletApp(App):
         handler_name = f"handle_{block_type.lower()}"
         handler_method = getattr(self, handler_name, None)
 
+        # Handle the instruction
         if handler_method:
             result = handler_method(params)
             if block_type == "REQUEST" and result == exceptions.ReadTimeout:
@@ -770,10 +826,22 @@ class BulletApp(App):
         pattern = re.compile(r'<(.*?)>')
         matches = re.findall(pattern, input_string)
         
+        # Replace the variables with their values
         for match in matches:
             variable_name = match.strip()
+
             if "REQUEST-" in variable_name:
-                variable_value = str(self.responses.get(variable_name[:-5])) if "text" in variable_name else str(self.headers.get(variable_name[:-8]))
+                variable_value = ""
+                if "text" in variable_name:
+                        variable_value = str(self.responses.get(variable_name[:-5]))
+                elif "status_code" in variable_name: 
+                    variable_value = str(self.response_codes.get(variable_name[:-12]))
+                elif "headers" in variable_name:
+                    variable_value = str(self.headers.get(variable_name[:-8]))
+                elif "cookies" in variable_name:
+                    variable_value = str(self.cookies.get(variable_name[:-8]))
+                elif "url" in variable_name:
+                    variable_value = str(self.urls.get(variable_name[:-4]))
             elif variable_name == "EMAIL":
                 variable_value = self.email
             elif variable_name == "PASSWORD":
@@ -791,7 +859,6 @@ class BulletApp(App):
 
         return input_string
 
-
     def handle_result(self, params):
         """
         Handles the RESULT block type in instructions.
@@ -799,6 +866,8 @@ class BulletApp(App):
         :param params: Dictionary of parameters extracted from the instruction.
         :return: Processed result or None.
         """
+
+        # Get the result string and replace variables
         value_string = params.get('VALUE', '').strip()
         variable_content = self._replace_variables(params.get('VAR', '').strip())
         category = params.get('CATEGORY', '').strip()
@@ -816,27 +885,41 @@ class BulletApp(App):
 
     def handle_request(self, params):
         """
-        Handle HTTP requests based on provided parameters.
-        
-        :param params: Dictionary containing parameters for the request.
+        Handles the REQUEST block type in instructions.
+
+        :param params: Dictionary of parameters extracted from the instruction.
         """
 
+        # Get the request parameters
         block = params.get('BLOCK')
         type_ = params.get('TYPE', 'GET').upper()
         url = params.get('URL')
         headers = params.get('HEADERS')
-        post_data = params.get('POST')
+        content_data = params.get('CONTENT')
+        is_redirect = params.get('REDIRECT', 'TRUE').upper()
 
+        # Check if the URL is valid
         if not url:
             self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, "\nURL not provided for the request")
             return
         
+        # Replace variables in the URL string
         url=self._replace_variables(url)
+        if url == None:
+            return
+        
+        # Replace RND functions in the URL string
+        url = self._random_string(url)
+        
+        # Replace LENGTH functions in the URL string
+        url = self._length_string(url)
 
-        # COnvert the headers string to a dictionary
+        # Convert the headers string to a dictionary
         headers_dict = {}
         if headers:
             headers = self._replace_variables(headers)
+            headers = self._random_string(headers)
+            headers = self._length_string(headers)
             if headers == None:
                 self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, "\nHeaders provided are invalid for the request")
                 return
@@ -844,50 +927,133 @@ class BulletApp(App):
 
         response = None
         
+        # Set the timeout for the request
         try: self.timeout_n = int(self.timeout_input.text)
-        except ValueError: self.timeout_n = 45
+        except AttributeError: self.timeout_n = 45
 
+        # Make the request
         if type_ == 'GET':
-            try: response = self.my_session.get(url, headers=headers_dict, proxies=self.proxyDict, timeout=self.timeout_n, verify=False)
+            try: response = self.my_session.get(url, headers=headers_dict, proxies=self.proxyDict, timeout=self.timeout_n, verify=False, allow_redirects=is_redirect == 'TRUE')
             except exceptions.ReadTimeout:
                 self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nTimeout Error in GET [{block}]")
                 return exceptions.ReadTimeout
+            except exceptions.ConnectionError:
+                self.response_codes[block] = 404
+                self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nConnection Error in GET [{block}]")
+                return
+            except exceptions.InvalidURL:
+                self.response_codes[block] = 404
+                self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nInvalid URL in GET [{block}]")
+                return
+            except exceptions.TooManyRedirects:
+                self.response_codes[block] = 404
+                self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nToo Many Redirects in GET [{block}]")
+                return
+
         elif type_ == 'POST':
             # if payload is json not must be encoded
-            if post_data[0:1] == "{" or post_data[0:1] == "[":
-                post_data=self._replace_variables(post_data, False)
+            if content_data[0:1] == "{" or content_data[0:1] == "[":
+                content_data=self._replace_variables(content_data, False)
+                content_data=self._random_string(content_data)
+                content_data=self._length_string(content_data)
             else:
-                post_data=self._replace_variables(post_data, True)
-            if post_data == None:
+                content_data=self._replace_variables(content_data, True)
+                content_data=self._random_string(content_data)
+                content_data=self._length_string(content_data)
+            if content_data == None:
                 return
-            try: response = self.my_session.post(url, data=post_data, proxies=self.proxyDict, headers=headers, timeout=self.timeout_n, verify=False)
+            try: response = self.my_session.post(url, data=content_data, proxies=self.proxyDict, headers=headers, timeout=self.timeout_n, verify=False, allow_redirects=is_redirect == 'TRUE')
             except exceptions.ReadTimeout: 
                 self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nTimeout Error in POST [{block}]")
                 return exceptions.ReadTimeout
+            except exceptions.ConnectionError:
+                self.response_codes[block] = 404
+                self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nConnection Error in POST [{block}]")
+                return
+            except exceptions.InvalidURL:
+                self.response_codes[block] = 404
+                self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nInvalid URL in POST [{block}]")
+                return
+            except exceptions.TooManyRedirects:
+                self.response_codes[block] = 404
+                self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nToo Many Redirects in POST [{block}]")
+                return
+
+        elif type_ == 'PUT':
+            try: response = self.my_session.put(url, data=content_data, proxies=self.proxyDict, headers=headers, timeout=self.timeout_n, verify=False, allow_redirects=is_redirect == 'TRUE')
+            except exceptions.ReadTimeout:
+                self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nTimeout Error in PUT [{block}]")
+                return exceptions.ReadTimeout
+            except exceptions.ConnectionError:
+                self.response_codes[block] = 404
+                self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nConnection Error in PUT [{block}]")
+                return
+            except exceptions.InvalidURL:
+                self.response_codes[block] = 404
+                self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nInvalid URL in PUT [{block}]")
+                return
+            except exceptions.TooManyRedirects:
+                self.response_codes[block] = 404
+                self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nToo Many Redirects in PUT [{block}]")
+                return
+
+        elif type_ == 'DELETE':
+            try: response = self.my_session.delete(url, proxies=self.proxyDict, headers=headers, timeout=self.timeout_n, verify=False, allow_redirects=is_redirect == 'TRUE')
+            except exceptions.ReadTimeout:
+                self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nTimeout Error in DELETE [{block}]")
+                return exceptions.ReadTimeout
+            except exceptions.ConnectionError:
+                self.response_codes[block] = 404
+                self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nConnection Error in DELETE [{block}]")
+                return
+            except exceptions.InvalidURL:
+                self.response_codes[block] = 404
+                self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nInvalid URL in DELETE [{block}]")
+                return
+            except exceptions.TooManyRedirects:
+                self.response_codes[block] = 404
+                self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nToo Many Redirects in DELETE [{block}]")
+                return
 
         if response != None:
+            # Save the response in dictionaries for later use in other blocks    
             self.responses[block] = response.text
             self.headers[block] = response.headers
             self.cookies[block] = response.cookies
+            self.response_codes[block] = response.status_code
+            self.urls[block] = response.url
             self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\n{block} - Response Code: {response.status_code}")
 
-    def handle_save(self, params):
+    def handle_set(self, params):
         """
-        Save a value to a variable for later use.
+        Set a value to a variable for later use, RND and LENGTH functions are supported.
         
         :param params: Dictionary containing variable name and value.
         """
 
+        # Get the variable name and value
         variable_name = params.get('VAR')
         value = params.get('VALUE')
 
         if not variable_name or value is None:
             self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, "\nVariable name or value not provided")
             return
+        
+        # Replace placeholders in the value string
+        value = self._replace_variables(value)
+        if value == None:
+            return
+        
+        # Replace RND functions in the value string
+        value = self._random_string(value)
 
-        # Save the variable in a dictionary for later use
+        # Replace LENGTH functions in the value string
+        value = self._length_string(value)
+
+        # Save the variable in a dictionary for later use in other blocks
         self.variables[variable_name] = value
-    
+        self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nSET ({variable_name}) - {value}")
+
     def handle_find(self, params):
         """
         Find a substring between two delimiters.
@@ -895,15 +1061,18 @@ class BulletApp(App):
         :param params: Dictionary containing the variable name, delimiters, and block.
         """
 
+        # Get the variable name, delimiters, and block
         block = params.get('BLOCK')
         variable_name = params.get('VAR')
         first_delimiter = params.get('FIRST')
         last_delimiter = params.get('LAST')
 
+        # Check if the variable name and delimiters are provided
         if not variable_name or not variable_name:
             self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, "\nVariable name or pattern not provided")
             return
         
+        # Replace placeholders in the variable name string
         if "<" in variable_name:
             variable_name = self._extract_substring(variable_name, "<", ">")
             if "text" in variable_name:
@@ -922,27 +1091,31 @@ class BulletApp(App):
             elif "headers" in variable_name:
                 variable_value = str(self.headers.get(variable_name[:-8]))
             else:
-                self.add_text_to_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nVariable {variable_name} not Found")
+                variable_value = "Not Found"
+                result = extract_substring(variable_value, first_delimiter, last_delimiter)
+                self.variables[block] = result
+                self.add_text_to_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nFIND {variable_name} - {result}")
                 return
         
+        # Check if the variable exists
         result = extract_substring(variable_value, first_delimiter, last_delimiter)
+        if result == "":
+            result = "Not Found"
         self.variables[block] = result
 
-        if result != "":
-            self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nFIND ({variable_name}) - {result}")
-            return
-        else:
-            self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nFIND ({variable_name}) - Not Found")
-            return
+        self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\nFIND ({variable_name}) - {result}")
 
     def handle_print(self, params):
-        """Handle the PRINT block in the instructions."""
+        """
+        Print the content of a variable.
+        """
         variable_name = params.get('VAR')
 
         if not variable_name:
             self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, "\nVariable name not provided")
             return
 
+        # Replace placeholders in the variable name string
         if "<" in variable_name:
             variable_name = self._extract_substring(variable_name, "<", ">")
             if "text" in variable_name:
@@ -967,7 +1140,13 @@ class BulletApp(App):
             return
         
     def _print_content(self, variable_name, content):
-        """Print the content of a variable in chunks."""
+        """
+        Print the content of a variable in chunks.
+
+        :param variable_name: The name of the variable.
+        :param content: The content of the variable.
+        """
+
         if content:
             content_str = str(content)
             if len(content_str) > 1000:
@@ -989,7 +1168,54 @@ class BulletApp(App):
         except ValueError:
             return ""
 
+    def _length_string(self, value):
+        """
+        Replace LENGTH functions in the given value string with the length of the specified variable.
+        """
+
+        # Check if the value contains LENGTH functions
+        if "LENGTH" in value:
+
+            # Define the regular expression pattern for LENGTH functions
+            pattern = re.compile(r'LENGTH\((.*?)\)')
+            matches = re.findall(pattern, value)
+            
+            for match in matches:
+                # Split the LENGTH function parameters
+                length_params = match.split(',')
+                variable_name = length_params[0].split('>')[1]
+                variable_content = self._replace_variables(variable_name)
+                if variable_content == None:
+                    return
+
+                value = value.replace(f"LENGTH({match})", str(len(variable_content)), 1)
+
+        return value
+
+    def _random_string(self, value):
+        """
+        Replace RND functions in the given value string with random strings.
+        """
+
+        # Check if the value contains RND functions
+        if "RND" in value:
+            # Define the regular expression pattern for RND functions
+            pattern = re.compile(r'RND\((.*?)\)')
+            matches = re.findall(pattern, value)
+            
+            for match in matches:
+                # Split the RND function parameters
+                rnd_params = match.split(',')
+                rnd_length = rnd_params[0].split('>')[1]
+                rnd_chars = rnd_params[1].split('>')[1]
+                rnd_string = ''.join(random.choice(rnd_chars) for _ in range(int(rnd_length)))
+                value = value.replace(f"RND({match})", rnd_string, 1)
+
+        return value
+
     def worker(self, task_queue, selected_option):
+        """Worker thread that processes the instructions."""
+        # Keep running until the queue is empty
         while True:
             self.pause_event.wait()
             if task_queue.empty():
@@ -1015,6 +1241,7 @@ class BulletApp(App):
                 result = self.run_custom_instructions(email, passwordO, proxyDict)
             if not result:
                 self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\n[*] Combo Finished!")
+                self.stop_file(self.run_button, True)
                 return
             elif "You must load instructions first!" in result:
                 self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\n[*] You must load instructions first!")
@@ -1027,20 +1254,22 @@ class BulletApp(App):
             self.worker_threads_running -= 1  # Decrement the count of running threads
             task_queue.task_done()
         
-    def update_cpm(self, dt=None):  # Dt is the delta time between calls
+    def update_cpm(self, dt=None):
         current_time = time.time()
         # Remove all the times that are older than 60 seconds
         self.check_times = [t for t in self.check_times if current_time - t < 60]
         cpm = len(self.check_times)
         self.update_info_label(self.cpm_label, f"CPM: {cpm}")
 
-    def update_time(self, dt=None):  
+    def update_time(self, dt=None): 
+        # Update the time label 
         self.seconds += 1
         hours, remainder = divmod(self.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         self.update_info_label(self.time_label, f"{hours:02}:{minutes:02}:{seconds:02}")
 
     def update_info_label(self, label, update):
+        # Update the label with the given text
         if "Hits" in label.text: 
             self.modify_line(self.hits_labels, 0, f"Hits: {str(update)}")
         elif "Deads" in label.text:
@@ -1049,6 +1278,7 @@ class BulletApp(App):
             label.text = str(update)
 
     def check_threads_finished(self, dt):
+        # Check if all the threads have finished
         if self.worker_threads_running == 0:
             print("Threads Finished")
         if self.progress_bar.value == 100 and self.impreso == False:
@@ -1073,6 +1303,8 @@ class BulletApp(App):
                 self.hits_count += 1
                 self.update_info_label(self.hits_labels[0], self.hits_count)
                 self.schedule_update_labels(self.result_hits_box.children[0].children[0], self.hits_labels, result)
+            elif "| BAN" in result:
+                self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, result)
             else:
                 self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, result)
         Clock.schedule_once(update)
@@ -1108,9 +1340,12 @@ class BulletApp(App):
             Clock.unschedule(self.update_cpm)
 
     def run_file(self, instance):
+        """
+        Run the loaded combo and proxies.
+        """
+
+        # Reset the variables
         self.loaded_config = False
-        Clock.schedule_interval(self.update_cpm, 1)
-        Clock.schedule_interval(self.update_time, 1)
         self.seconds = 0
         self.check_times = []
         try:
@@ -1127,6 +1362,7 @@ class BulletApp(App):
         if self.is_stopping == True:
             return
 
+        # Check if the combo and proxies are loaded and the threads number is valid
         if self.proxies == "" and self.proxies_button.disabled == False:
             self.schedule_update_labels(self.result_logs_box.children[0].children[0], self.result_logs_labels, f"\n[*] You must load Proxies!")
             self.state_label.text = "State: Sleeping"
@@ -1149,18 +1385,24 @@ class BulletApp(App):
         self.run_button.bind(on_press=self.stop_file)
 
         try: self.start_n = int(self.start_input.text)
-        except ValueError: self.start_n = 45
+        except AttributeError: self.start_n = 0
 
+        # Start the timer and CPM counter
+        Clock.schedule_interval(self.update_cpm, 1)
+        Clock.schedule_interval(self.update_time, 1)
+
+        # Get the accounts from the combo
         accsLista = []
         acssLines = self.combo.split('\n')[self.start_n:]
         for line in acssLines:
             accsLista.append(line.strip())
 
+        # Create the task queue and result queue
         self.result_queue = Queue()
-
         self.worker_threads_running = 0
-
         self.task_queue = Queue()
+        
+        # Put the accounts in the task queue
         for acc in acssLines:
             self.task_queue.put(acc)
         self.total_instructions = self.task_queue.qsize()
@@ -1180,6 +1422,9 @@ class BulletApp(App):
         Clock.schedule_interval(self.check_threads_finished, 1)
 
         return
+
+class BulletApp(App):
+    def build(self): return ScreenManagement()
 
 if __name__ == '__main__':
     BulletApp().run()
