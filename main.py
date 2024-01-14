@@ -316,17 +316,22 @@ class MainScreen(Screen):
         
         # Only keep the last 100 lines
         remaining_lines = 100 - len(current_label.text.split('\n'))
-        current_label.text = '\n'.join(lines[:remaining_lines])
-        lines = lines[remaining_lines:]
+        current_label.text = '\n'.join(lines[-remaining_lines:])
+        lines = lines[:-remaining_lines]
+        
+        # Delete old labels when exceding 100 lines limit
+        while len(labels) * 100 - len(lines) > 100:
+            content_box.remove_widget(labels[0])
+            labels.pop(0)
         
         # Add the remaining lines to new labels
         while lines:
             new_label = Label(text="", font_size=dp(15), size_hint_y=None, size_hint_x=None, halign="left", valign="top", color=color)
             new_label.bind(texture_size=new_label.setter('size'))
-            new_label.text = '\n'.join(lines[:100])
+            new_label.text = '\n'.join(lines[:200])
             content_box.add_widget(new_label)
             labels.append(new_label)
-            lines = lines[100:]
+            lines = lines[200:]
 
     def modify_line(self, labels, line_number, new_content):
         """
