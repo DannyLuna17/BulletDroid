@@ -1,6 +1,22 @@
+<div align="center">
+
+# Repository Archived!
+
+[![STATUS: ARCHIVED](https://img.shields.io/badge/STATUS-ARCHIVED-red?style=for-the-badge)](#)
+[![GO TO: BulletDroid 2](https://img.shields.io/badge/GO%20TO-BulletDroid%202-2ea44f?style=for-the-badge&logo=github)](https://github.com/DannyLuna17/BulletDroid2)
+
+</div>
+
+> [!IMPORTANT]
+> **Notice:** This repository has been archived. 
+> A newer, better developed version is available here: **[BulletDroid 2](https://github.com/DannyLuna17/BulletDroid2)**. 
+> New features, fixes, and support will land in BulletDroid 2 first. This repo remains public for reference.
+
+---
+
 BulletDroid
 =======
-[![CodeFactor](https://www.codefactor.io/repository/github/lunapy17/bulletdroid/badge)](https://www.codefactor.io/repository/github/lunapy17/bulletdroid)
+[![CodeFactor](https://www.codefactor.io/repository/github/DannyLuna17/bulletdroid/badge)](https://www.codefactor.io/repository/github/DannyLuna17/bulletdroid)
 
 Inspired by OpenBullet, this repository offers a powerful webtesting toolkit tailored for Android devices. The application presents an attempt of a user-friendly GUI built with Kivy, powered by a Python backend. Designed for a mobile experience, this tool is designed to execute requests, being suitable for data scraping and pentesting using custom configs, multi-threading, and proxy support.
 
